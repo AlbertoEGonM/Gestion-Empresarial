@@ -5,6 +5,7 @@ const { getEnvConfig } = require("./env");
 const { assertAllowedFields, parsePagination, sanitizeText } = require("./validator");
 const { checkLoginLockout, clearLoginAttempts, recordFailedLoginAttempt, stripBotFields } = require("./security");
 const { ensureAuditTable, logSecurityEvent } = require("./audit");
+const { normalizePermissions } = require("./permissions");
 
 const COMPANIES = [
   { legacyCode: "TEXTILES_GH", code: "VICMAR_HN", name: "Vicmar", legalName: "Telas Americanas Vicmar, S. de R.L.", countryCode: "HN", countryName: "Honduras", locale: "es-HN", currencyCode: "HNL", currencySymbol: "L", taxIdLabel: "RTN", taxId: "0801-2024-166420", taxRate: 15, city: "Villanueva, Cortes" },
@@ -150,6 +151,7 @@ function publicUser(user) {
     city: user.city,
     role: user.role,
     isGlobalAdmin: Boolean(user.is_global_admin),
+    permissions: normalizePermissions(user.permissions_json, user.role),
     createdAt: user.created_at,
   };
 }
@@ -218,7 +220,23 @@ async function addColumn(tableName, definition) {
   await pool.query(`ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS ${portableDefinition}`);
 }
 
+let authTablesPromise = null;
+let companiesCache = null;
+let companiesCacheUntil = 0;
+const sessionCache = new Map();
+const SESSION_CACHE_TTL_MS = 15_000;
+
 async function ensureAuthTables() {
+  if (!authTablesPromise) {
+    authTablesPromise = ensureAuthTablesInternal().catch((error) => {
+      authTablesPromise = null;
+      throw error;
+    });
+  }
+  return authTablesPromise;
+}
+
+async function ensureAuthTablesInternal() {
   await pool.query(`CREATE TABLE IF NOT EXISTS companies (
     id SERIAL PRIMARY KEY,
     code VARCHAR(50) NOT NULL UNIQUE,
@@ -288,6 +306,7 @@ async function ensureAuthTables() {
   await addColumn("users", "company_id INT NULL AFTER company");
   await addColumn("users", "is_global_admin SMALLINT NOT NULL DEFAULT 0 AFTER role");
   await addColumn("users", "status VARCHAR(30) NOT NULL DEFAULT 'Activo' AFTER is_global_admin");
+  await addColumn("users", "permissions_json TEXT NULL AFTER status");
 
   await pool.query(`CREATE TABLE IF NOT EXISTS registration_requests (
     id SERIAL PRIMARY KEY,
@@ -365,12 +384,17 @@ async function ensureAuthTables() {
 }
 
 async function listCompanies() {
+  if (companiesCache && Date.now() < companiesCacheUntil) {
+    return companiesCache;
+  }
   await ensureAuthTables();
   const [rows] = await pool.query(
     `SELECT ${COMPANY_COLUMNS} FROM companies WHERE active = 1
      ORDER BY CASE code WHEN 'VICMAR_HN' THEN 1 WHEN 'TELAS_OLIMPICA_MX' THEN 2 WHEN 'GRUPO_CIRSA_HN' THEN 3 ELSE 4 END LIMIT 50`
   );
-  return rows.map(publicCompany);
+  companiesCache = rows.map(publicCompany);
+  companiesCacheUntil = Date.now() + 60_000;
+  return companiesCache;
 }
 
 async function requestRegistration(userData, ipAddress = "local") {
@@ -418,7 +442,7 @@ async function loginUser(username, password, ipAddress = "local") {
 
   const [rows] = await pool.query(
     `SELECT u.id, u.first_name, u.last_name, u.second_last_name, u.email, u.username, u.password, u.password_hash,
-            u.company, u.company_id, u.role, u.is_global_admin, u.status, u.created_at,
+            u.company, u.company_id, u.role, u.is_global_admin, u.status, u.permissions_json, u.created_at,
             c.code company_code, c.name company_name, c.country_code, c.country_name, c.locale, c.currency_code,
             c.currency_symbol, c.tax_id_label, c.tax_id, c.tax_rate, c.city
      FROM users u
@@ -466,12 +490,16 @@ async function loginUser(username, password, ipAddress = "local") {
 }
 
 async function getSession(token) {
-  await ensureAuthTables();
   if (!token) return null;
   const tokenHash = crypto.createHash("sha256").update(String(token)).digest("hex");
+  const cached = sessionCache.get(tokenHash);
+  if (cached && Date.now() < cached.until) {
+    return cached.user;
+  }
+  await ensureAuthTables();
   const [rows] = await pool.query(
     `SELECT u.id, u.first_name, u.last_name, u.second_last_name, u.email, u.username,
-            u.company, u.company_id, u.role, u.is_global_admin, u.status, u.created_at,
+            u.company, u.company_id, u.role, u.is_global_admin, u.status, u.permissions_json, u.created_at,
             c.code company_code, c.name company_name, c.country_code, c.country_name, c.locale, c.currency_code,
             c.currency_symbol, c.tax_id_label, c.tax_id, c.tax_rate, c.city, s.expires_at session_expires_at
      FROM auth_sessions s
@@ -480,12 +508,19 @@ async function getSession(token) {
      WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > NOW() AND u.status = 'Activo' LIMIT 1`,
     [tokenHash]
   );
-  return rows.length ? { ...publicUser(rows[0]), sessionExpiresAt: rows[0].session_expires_at } : null;
+  const user = rows.length ? { ...publicUser(rows[0]), sessionExpiresAt: rows[0].session_expires_at } : null;
+  if (user) {
+    sessionCache.set(tokenHash, { user, until: Date.now() + SESSION_CACHE_TTL_MS });
+  } else {
+    sessionCache.delete(tokenHash);
+  }
+  return user;
 }
 
 async function revokeSession(token) {
   if (!token) return;
   const tokenHash = crypto.createHash("sha256").update(String(token)).digest("hex");
+  sessionCache.delete(tokenHash);
   await pool.query("UPDATE auth_sessions SET revoked_at = NOW() WHERE token_hash = ?", [tokenHash]);
 }
 
@@ -547,11 +582,37 @@ async function approveRegistration(id, adminUser, ipAddress = "local") {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [request.first_name, request.last_name, request.second_last_name, request.email, request.username, "__HASHED__", request.password_hash || hashPassword(request.password), request.company, request.company_id, request.role]
     );
+    const defaultBranch = Number(request.company_id) === 2 ? "Sucursal Principal CDMX" : "Sucursal Principal";
+    const defaultPosition =
+      request.role && request.role !== "Empleado" ? `Especialista de ${request.role}` : "Auxiliar Operativo Textil";
+    await connection.query(
+      `INSERT INTO employees
+       (company_id, first_name, last_name, second_last_name, email, gender, position, branch, system_role, status, created_by)
+       VALUES (?, ?, ?, ?, ?, 'No especificado', ?, ?, ?, 'Activo', ?)
+       ON CONFLICT (company_id, email) DO UPDATE
+       SET first_name = EXCLUDED.first_name,
+           last_name = EXCLUDED.last_name,
+           second_last_name = EXCLUDED.second_last_name,
+           system_role = EXCLUDED.system_role,
+           status = 'Activo',
+           updated_at = CURRENT_TIMESTAMP`,
+      [
+        request.company_id,
+        request.first_name,
+        request.last_name,
+        request.second_last_name || null,
+        request.email,
+        defaultPosition,
+        defaultBranch,
+        request.role || "Empleado",
+        adminUser.id,
+      ]
+    );
     await connection.query("UPDATE registration_requests SET status = 'Aprobada', decided_by = ?, decided_at = NOW() WHERE id = ?", [adminUser.id, request.id]);
     await connection.commit();
     const [users] = await pool.query(
       `SELECT u.id, u.first_name, u.last_name, u.second_last_name, u.email, u.username,
-              u.company, u.company_id, u.role, u.is_global_admin, u.status, u.created_at,
+              u.company, u.company_id, u.role, u.is_global_admin, u.status, u.permissions_json, u.created_at,
               c.code company_code, c.name company_name, c.country_code, c.country_name, c.locale, c.currency_code,
               c.currency_symbol, c.tax_id_label, c.tax_id, c.tax_rate, c.city
        FROM users u JOIN companies c ON c.id = u.company_id WHERE u.id = ? LIMIT 1`,
@@ -631,6 +692,7 @@ async function resetPassword(token, password, ipAddress = "local") {
   await pool.query("UPDATE users SET password_hash = ?, password = '__HASHED__' WHERE id = ?", [hashPassword(password), rows[0].user_id]);
   await pool.query("UPDATE password_recovery_tokens SET used_at = NOW() WHERE id = ?", [rows[0].id]);
   await pool.query("UPDATE auth_sessions SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL", [rows[0].user_id]);
+  sessionCache.clear();
   await logSecurityEvent({
     userId: rows[0].user_id,
     action: "PASSWORD_RESET_COMPLETED",
@@ -698,10 +760,15 @@ async function deleteOwnAccount(user, password, confirmation, ipAddress = "local
   }
 }
 
+function clearSessionCache() {
+  sessionCache.clear();
+}
+
 module.exports = {
   ALLOWED_ROLES,
   approveRegistration,
   cleanText,
+  clearSessionCache,
   deleteOwnAccount,
   ensureAuthTables,
   getRegistrations,

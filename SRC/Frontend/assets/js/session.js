@@ -23,12 +23,29 @@ function getSessionUser() {
 }
 
 function isAdminUser(user) {
-  return user?.role === ADMIN_ROLE;
+  return Boolean(user?.isGlobalAdmin || user?.role === ADMIN_ROLE);
 }
 
-function canAccessModule(user, moduleKey) {
+function canAccessModule(user, moduleKey, viewKey = null) {
   if (!moduleKey || moduleKey === "dashboard" || moduleKey === "ayuda") return true;
-  if (moduleKey === "administrador") return isAdminUser(user);
+  if (isAdminUser(user)) return true;
+  if (moduleKey === "administrador") return false;
+
+  const perms = user?.permissions;
+  if (perms && typeof perms === "object") {
+    if (moduleKey === "reportes") {
+      return Object.values(perms).some((m) => m && Array.isArray(m.actions) && m.actions[0]);
+    }
+    const modPerm = perms[moduleKey];
+    if (!modPerm || !Array.isArray(modPerm.actions) || !modPerm.actions[0]) {
+      return false;
+    }
+    if (viewKey && Array.isArray(modPerm.views)) {
+      return modPerm.views.includes(viewKey);
+    }
+    return true;
+  }
+
   return (ROLE_MODULES[user?.role] || []).includes(moduleKey);
 }
 
@@ -39,9 +56,11 @@ function moduleFromHref(href) {
     if (url.pathname.endsWith("/inventario.html") || url.pathname.endsWith("/registrar-ingreso.html")) {
       return "inventarios";
     }
-    if (url.pathname.endsWith("/reportes-contables.html")) return "contabilidad";
+    if (url.pathname.endsWith("/reportes-contables.html")) return "contabilidad:estados";
     if (ADMIN_PAGES.some((page) => url.pathname.endsWith(page))) return "administrador";
-    return url.searchParams.get("modulo") || "";
+    const mod = url.searchParams.get("modulo") || "";
+    const view = url.searchParams.get("vista") || "";
+    return mod && view ? `${mod}:${view}` : mod;
   } catch (error) {
     return "";
   }
@@ -50,26 +69,33 @@ function moduleFromHref(href) {
 function requestedPageModule() {
   const { pathname, search } = window.location;
   if (pathname.endsWith("/inventario.html") || pathname.endsWith("/registrar-ingreso.html")) {
-    return "inventarios";
+    return "inventarios:productos";
   }
-  if (pathname.endsWith("/reportes-contables.html")) return "contabilidad";
+  if (pathname.endsWith("/reportes-contables.html")) return "contabilidad:estados";
   if (ADMIN_PAGES.some((page) => pathname.endsWith(page))) return "administrador";
   if (pathname.endsWith("/modulo.html")) {
-    return new URLSearchParams(search).get("modulo") || "compras";
+    const params = new URLSearchParams(search);
+    return params.get("modulo") || "compras";
   }
   return "";
 }
 
+function canAccessTarget(user, targetSpec) {
+  if (!targetSpec) return true;
+  const [moduleKey, viewKey] = String(targetSpec).split(":");
+  return canAccessModule(user, moduleKey, viewKey || null);
+}
+
 function hideUnauthorizedModules(user) {
   document.querySelectorAll("a[href]").forEach((link) => {
-    const moduleKey = link.dataset.module || moduleFromHref(link.getAttribute("href"));
-    if (moduleKey === "administrador" && !isAdminUser(user)) {
+    const targetSpec = link.dataset.module || moduleFromHref(link.getAttribute("href"));
+    if (targetSpec === "administrador" && !isAdminUser(user)) {
       link.hidden = true;
       return;
     }
-    if (moduleKey && !canAccessModule(user, moduleKey)) {
+    if (targetSpec && !canAccessTarget(user, targetSpec)) {
       link.hidden = true;
-    } else if (moduleKey) {
+    } else if (targetSpec) {
       link.hidden = false;
     }
   });
@@ -299,7 +325,7 @@ if (!currentUser) {
   window.location.href = "./login.html";
 } else if (document.body.dataset.adminOnly === "true" && !isAdminUser(currentUser)) {
   window.location.replace("./dashboard.html?acceso=denegado");
-} else if (!canAccessModule(currentUser, requestedPageModule())) {
+} else if (!canAccessTarget(currentUser, requestedPageModule())) {
   window.location.replace("./dashboard.html?acceso=denegado");
 } else {
   applySessionUser(currentUser);
@@ -315,7 +341,7 @@ if (!currentUser) {
       window.location.replace("./dashboard.html?acceso=denegado");
       return;
     }
-    if (!canAccessModule(validatedUser, requestedPageModule())) {
+    if (!canAccessTarget(validatedUser, requestedPageModule())) {
       window.location.replace("./dashboard.html?acceso=denegado");
       return;
     }

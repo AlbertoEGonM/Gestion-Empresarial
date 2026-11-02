@@ -48,6 +48,7 @@ function selectedCompany() {
 }
 
 function updateInitials() {
+  if (!employeeInitials) return;
   const first = employeeForm.elements.firstName.value.trim().charAt(0);
   const last = employeeForm.elements.lastName.value.trim().charAt(0);
   employeeInitials.textContent = `${first}${last}`.toUpperCase() || "NE";
@@ -65,7 +66,7 @@ function populateBranches(countryCode, preferredBranch = "") {
 function applyCountryDocuments(preferredBranch = "") {
   const company = selectedCompany();
   const isMexico = company.countryCode === "MX";
-  employeeCompanyName.textContent = company.name;
+  if (employeeCompanyName) employeeCompanyName.textContent = company.name;
   if (employeeCountryBadge) {
     employeeCountryBadge.textContent = isMexico ? "Mexico (MX)" : "Honduras (HN)";
   }

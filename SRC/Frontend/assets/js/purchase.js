@@ -15,33 +15,6 @@ const marginResult = document.querySelector("#marginResult");
 const purchaseError = document.querySelector("#purchase-error");
 const purchaseSubmit = document.querySelector("#purchase-submit");
 
-const inventoryItems = {
-  "TELA-00142": {
-    description: "Manta cruda 1.50 m — 100% algodon",
-    category: "Algodon",
-    quantity: 500,
-    unit: "Metro",
-    cost: 12750,
-    price: 18500,
-  },
-  "TELA-00098": {
-    description: "Lino premium azul marino — importacion",
-    category: "Lino",
-    quantity: 240,
-    unit: "Metro",
-    cost: 9360,
-    price: 13200,
-  },
-  "TELA-00215": {
-    description: "Popelina estampada floral — poliester/algodon",
-    category: "Poliester",
-    quantity: 180,
-    unit: "Metro",
-    cost: 4140,
-    price: 5580,
-  },
-};
-
 function currentCompanyUser() {
   return window.gestionUserDb?.getCurrentUser() || {};
 }
@@ -93,19 +66,6 @@ function updateResults() {
   marginResult.textContent = `${margin.toFixed(2)}%`;
 }
 
-const params = new URLSearchParams(window.location.search);
-const selectedId = params.get("id");
-if (selectedId && inventoryItems[selectedId]) {
-  const item = inventoryItems[selectedId];
-  productIdInput.value = selectedId;
-  descriptionInput.value = item.description;
-  quantityInput.value = String(item.quantity);
-  unitSelect.value = item.unit;
-  categorySelect.value = item.category;
-  totalCostInput.value = item.cost.toFixed(2);
-  totalPriceInput.value = item.price.toFixed(2);
-}
-
 const userAtLoad = currentCompanyUser();
 if (userAtLoad.countryCode === "MX") {
   exchangeRateInput.value = "19.85";
@@ -138,8 +98,6 @@ form.addEventListener("submit", async (event) => {
   const localPriceTotal = Number(totalPriceInput.value || 0) * rate;
   const unitCost = localCostTotal / quantity;
   const unitPrice = localPriceTotal / quantity;
-  const minPrice = unitPrice * 0.9;
-  const offerPrice = unitPrice * 0.95;
 
   purchaseSubmit.disabled = true;
   purchaseSubmit.textContent = "Guardando ingreso...";
@@ -150,22 +108,17 @@ form.addEventListener("submit", async (event) => {
     const newProductRow = [
       code,
       description,
-      user.company || "Vicmar",
       category,
-      unit === "Rollo" ? "Rollo" : "Rollo",
       unit,
       String(quantity),
       formatLocalMoney(unitPrice),
-      formatLocalMoney(minPrice),
-      formatLocalMoney(offerPrice),
-      "Desde 100 m",
       "Activo",
       "Asignando...",
     ];
     currentRows.unshift(newProductRow);
     const savedProd = await window.gestionUserDb.saveDataset("inventarios", "productos", currentRows);
     const companyId = Number(user.companyId || 1);
-    localStorage.setItem(`textiles-gh-c${companyId}-inventarios-productos-rows`, JSON.stringify(savedProd.rows));
+    localStorage.setItem(`textiles-clean-v2-c${companyId}-inventarios-productos-rows`, JSON.stringify(savedProd.rows));
 
     const kardexDataset = await window.gestionUserDb.getDataset("inventarios", "kardex");
     const kardexRows = kardexDataset.initialized && Array.isArray(kardexDataset.rows) ? kardexDataset.rows : [];
@@ -184,7 +137,7 @@ form.addEventListener("submit", async (event) => {
       "Asignando...",
     ]);
     const savedKardex = await window.gestionUserDb.saveDataset("inventarios", "kardex", kardexRows);
-    localStorage.setItem(`textiles-gh-c${companyId}-inventarios-kardex-rows`, JSON.stringify(savedKardex.rows));
+    localStorage.setItem(`textiles-clean-v2-c${companyId}-inventarios-kardex-rows`, JSON.stringify(savedKardex.rows));
 
     sessionStorage.setItem("textiles-gh-flash", `Lote ${code} costeado e ingresado al inventario correctamente.`);
     window.location.href = "./modulo.html?modulo=inventarios&vista=productos";

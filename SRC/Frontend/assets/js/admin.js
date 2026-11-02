@@ -58,11 +58,29 @@ function createApprovalRow(registration) {
 
 async function loadAdminMetrics() {
   const user = window.gestionUserDb.getCurrentUser();
-  const [companies, employees, auditLogs] = await Promise.all([
-    window.gestionUserDb.listCompanies().catch(() => []),
-    window.gestionUserDb.listEmployees({ status: "Activo" }).catch(() => []),
-    window.gestionUserDb.getAuditLogs({ limit: 200 }).catch(() => []),
+  const companies = await window.gestionUserDb.listCompanies().catch(() => []);
+
+  if (companyFilter.options.length <= 1) {
+    if (user?.isGlobalAdmin) {
+      const prev = companyFilter.value;
+      companyFilter.innerHTML =
+        '<option value="">Todas las empresas</option>' +
+        companies.map((company) => `<option value="${company.id}"${String(company.id) === String(prev) ? " selected" : ""}>${escapeHtml(company.name)}</option>`).join("");
+    } else {
+      companyFilter.innerHTML = companies
+        .filter((c) => Number(c.id) === Number(user?.companyId))
+        .map((company) => `<option value="${company.id}" selected>${escapeHtml(company.name)}</option>`)
+        .join("");
+      companyFilter.disabled = true;
+    }
+  }
+
+  const targetCompanyId = companyFilter.value || (user?.isGlobalAdmin ? "all" : user?.companyId);
+  const [employees, auditLogs] = await Promise.all([
+    window.gestionUserDb.listEmployees({ status: "Activo", companyId: targetCompanyId }).catch(() => []),
+    window.gestionUserDb.getAuditLogs({ limit: 200, companyId: companyFilter.value || user?.companyId }).catch(() => []),
   ]);
+
   const companyCountEl = document.querySelector("#admin-company-count");
   const employeeCountEl = document.querySelector("#admin-employee-count");
   const auditCountEl = document.querySelector("#admin-audit-count");
@@ -70,32 +88,25 @@ async function loadAdminMetrics() {
   if (companyCountEl) companyCountEl.textContent = String(companies.length || 1);
   if (employeeCountEl) employeeCountEl.textContent = String(employees.length);
   if (auditCountEl) auditCountEl.textContent = String(auditLogs.length);
-
-  if (user?.isGlobalAdmin) {
-    companyFilter.innerHTML =
-      '<option value="">Todas las empresas</option>' +
-      companies.map((company) => `<option value="${company.id}">${escapeHtml(company.name)}</option>`).join("");
-  } else {
-    companyFilter.innerHTML = companies
-      .filter((c) => Number(c.id) === Number(user?.companyId))
-      .map((company) => `<option value="${company.id}" selected>${escapeHtml(company.name)}</option>`)
-      .join("");
-    companyFilter.disabled = true;
-  }
 }
 
 async function loadApprovals() {
   approvalList.innerHTML = '<div class="approval-empty">Cargando solicitudes...</div>';
-  const registrations = await window.gestionUserDb.getRegistrations({ status: statusFilter.value, companyId: companyFilter.value });
-  approvalList.innerHTML = "";
-  if (statusFilter.value === "Pendiente") {
-    document.querySelector("#admin-pending-count").textContent = String(registrations.length);
+  try {
+    const registrations = await window.gestionUserDb.getRegistrations({ status: statusFilter.value, companyId: companyFilter.value });
+    approvalList.innerHTML = "";
+    if (statusFilter.value === "Pendiente") {
+      document.querySelector("#admin-pending-count").textContent = String(registrations.length);
+    }
+    if (!registrations.length) {
+      approvalList.innerHTML = '<div class="approval-empty">No hay solicitudes que coincidan con los filtros seleccionados.</div>';
+      return;
+    }
+    registrations.forEach((registration) => approvalList.appendChild(createApprovalRow(registration)));
+  } catch (error) {
+    approvalList.innerHTML = '<div class="approval-empty">No se pudieron cargar las solicitudes.</div>';
+    throw error;
   }
-  if (!registrations.length) {
-    approvalList.innerHTML = '<div class="approval-empty">No hay solicitudes que coincidan con los filtros seleccionados.</div>';
-    return;
-  }
-  registrations.forEach((registration) => approvalList.appendChild(createApprovalRow(registration)));
 }
 
 approvalList.addEventListener("click", async (event) => {
@@ -146,7 +157,9 @@ rejectionForm.addEventListener("submit", async (event) => {
 
 document.querySelector("#rejection-close").addEventListener("click", () => rejectionDialog.close());
 document.querySelector("#rejection-cancel").addEventListener("click", () => rejectionDialog.close());
-companyFilter.addEventListener("change", () => loadApprovals().catch((error) => setApprovalStatus(error.message, true)));
+companyFilter.addEventListener("change", () => {
+  Promise.all([loadApprovals(), loadAdminMetrics()]).catch((error) => setApprovalStatus(error.message, true));
+});
 statusFilter.addEventListener("change", () => loadApprovals().catch((error) => setApprovalStatus(error.message, true)));
 
 Promise.all([loadAdminMetrics(), loadApprovals()]).catch((error) => setApprovalStatus(error.message, true));

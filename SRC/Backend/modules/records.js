@@ -1,4 +1,5 @@
 const pool = require("../config/connection");
+const { listCompanies } = require("../config/db");
 const { requireModuleAccess, resolveTenantCompanyId } = require("../config/permissions");
 const { logSecurityEvent } = require("../config/audit");
 const {
@@ -8,28 +9,40 @@ const {
   validateModuleAndView,
 } = require("../config/validator");
 
+let recordsTablePromise = null;
+
 async function assertActiveCompany(companyId) {
-  const [companies] = await pool.query("SELECT id FROM companies WHERE id = ? AND active = 1 LIMIT 1", [companyId]);
-  if (!companies.length) throw new Error("La empresa seleccionada no esta disponible.");
+  const companies = await listCompanies();
+  if (!companies.some((c) => Number(c.id) === Number(companyId))) {
+    throw new Error("La empresa seleccionada no esta disponible.");
+  }
 }
 
 async function ensureRecordsTable() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS business_datasets (
-    id BIGSERIAL PRIMARY KEY,
-    company_id INT NOT NULL,
-    module_key VARCHAR(40) NOT NULL,
-    view_key VARCHAR(40) NOT NULL,
-    rows_json TEXT NOT NULL,
-    updated_by INT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_business_dataset UNIQUE (company_id, module_key, view_key)
-  )`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS business_serial_sequences (
-    company_id INT NOT NULL, module_key VARCHAR(40) NOT NULL, view_key VARCHAR(40) NOT NULL,
-    next_value BIGINT NOT NULL DEFAULT 1, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (company_id, module_key, view_key)
-  )`);
+  if (!recordsTablePromise) {
+    recordsTablePromise = (async () => {
+      await pool.query(`CREATE TABLE IF NOT EXISTS business_datasets (
+        id BIGSERIAL PRIMARY KEY,
+        company_id INT NOT NULL,
+        module_key VARCHAR(40) NOT NULL,
+        view_key VARCHAR(40) NOT NULL,
+        rows_json TEXT NOT NULL,
+        updated_by INT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT uq_business_dataset UNIQUE (company_id, module_key, view_key)
+      )`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS business_serial_sequences (
+        company_id INT NOT NULL, module_key VARCHAR(40) NOT NULL, view_key VARCHAR(40) NOT NULL,
+        next_value BIGINT NOT NULL DEFAULT 1, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (company_id, module_key, view_key)
+      )`);
+    })().catch((error) => {
+      recordsTablePromise = null;
+      throw error;
+    });
+  }
+  return recordsTablePromise;
 }
 
 function serialPrefix(moduleKey, viewKey) {
@@ -79,10 +92,12 @@ async function assignSerialNumbers(connection, companyId, moduleKey, viewKey, ro
   return numberedRows;
 }
 
+const SHARED_CATALOG_VIEWS = new Set(["categorias", "unidades", "colores"]);
+
 async function getDataset(user, query = {}) {
   await ensureRecordsTable();
   const { moduleKey, viewKey } = validateModuleAndView(query.module, query.view);
-  requireModuleAccess(user, moduleKey);
+  requireModuleAccess(user, moduleKey, SHARED_CATALOG_VIEWS.has(viewKey) ? null : viewKey);
   const companyId = resolveTenantCompanyId(user, query.companyId);
   await assertActiveCompany(companyId);
   const { limit, offset } = parsePagination(query, 500, 1000);
@@ -107,7 +122,7 @@ async function saveDataset(user, body = {}) {
   await ensureRecordsTable();
   assertAllowedFields(body, ["moduleKey", "viewKey", "rows", "companyId"], "guardado de registros");
   const { moduleKey, viewKey } = validateModuleAndView(body.moduleKey, body.viewKey);
-  requireModuleAccess(user, moduleKey);
+  requireModuleAccess(user, moduleKey, SHARED_CATALOG_VIEWS.has(viewKey) ? null : viewKey);
   const companyId = resolveTenantCompanyId(user, body.companyId);
   await assertActiveCompany(companyId);
   if (!Array.isArray(body.rows) || body.rows.length > 500) {

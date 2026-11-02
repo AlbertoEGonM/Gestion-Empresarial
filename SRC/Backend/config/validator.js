@@ -109,7 +109,7 @@ function validatePositiveAmount(value, fieldLabel = "El monto", allowZero = true
 
 function parsePagination(query = {}, defaultLimit = 100, maxLimit = 500) {
   let limit = defaultLimit;
-  if (query.limit !== undefined && query.limit !== "") {
+  if (query.limit !== undefined && query.limit !== null && query.limit !== "") {
     const parsedLimit = Number(query.limit);
     if (!Number.isInteger(parsedLimit) || parsedLimit <= 0) {
       throw httpError("El parametro 'limit' debe ser un entero positivo.", 400);
@@ -118,7 +118,7 @@ function parsePagination(query = {}, defaultLimit = 100, maxLimit = 500) {
   }
 
   let offset = 0;
-  if (query.offset !== undefined && query.offset !== "") {
+  if (query.offset !== undefined && query.offset !== null && query.offset !== "") {
     const parsedOffset = Number(query.offset);
     if (!Number.isInteger(parsedOffset) || parsedOffset < 0) {
       throw httpError("El parametro 'offset' debe ser un entero mayor o igual a 0.", 400);

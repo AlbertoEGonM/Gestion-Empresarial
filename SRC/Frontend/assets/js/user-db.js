@@ -95,8 +95,18 @@ function clearSession() {
 }
 
 async function listCompanies() {
+  try {
+    const cached = JSON.parse(sessionStorage.getItem("gestionCompaniesCache") || "null");
+    if (Array.isArray(cached) && cached.length > 0) return cached;
+  } catch (error) {
+    // Ignore cache read error
+  }
   const data = await requestJson("/companies", { auth: false });
-  return data.companies || [];
+  const companies = data.companies || [];
+  if (companies.length > 0) {
+    sessionStorage.setItem("gestionCompaniesCache", JSON.stringify(companies));
+  }
+  return companies;
 }
 
 async function createUser(userData) {

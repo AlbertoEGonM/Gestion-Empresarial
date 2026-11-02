@@ -1,6 +1,6 @@
 const pool = require("../config/connection");
-const { cleanText, validateEmailAddress } = require("../config/db");
-const { requireAdminRole, resolveTenantCompanyId } = require("../config/permissions");
+const { cleanText, clearSessionCache, listCompanies, validateEmailAddress } = require("../config/db");
+const { normalizePermissions, requireAdminRole, resolveTenantCompanyId } = require("../config/permissions");
 const { assertAllowedFields, httpError, parsePagination } = require("../config/validator");
 const { blindIndex, decryptField, encryptField } = require("../config/crypto-fields");
 const { logSecurityEvent } = require("../config/audit");
@@ -22,13 +22,14 @@ const ALLOWED_EMPLOYEE_FIELDS = [
   "position",
   "branch",
   "systemRole",
+  "permissions",
 ];
 
 const EMPLOYEE_COLUMNS = `
   e.id, e.company_id, e.first_name, e.last_name, e.second_last_name, e.email,
   e.birth_date, e.birth_place, e.gender, e.identity_number, e.tax_number,
-  e.social_security_number, e.position, e.branch, e.system_role, e.status,
-  e.created_at, e.updated_at, c.name company_name
+  e.social_security_number, e.position, e.branch, e.system_role, e.permissions_json,
+  e.status, e.created_at, e.updated_at, c.name company_name
 `;
 
 function resolveCompanyId(user, requestedCompanyId) {
@@ -62,6 +63,7 @@ function publicEmployee(row) {
     position: row.position,
     branch: row.branch,
     systemRole: row.system_role,
+    permissions: normalizePermissions(row.permissions_json, row.system_role),
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -138,86 +140,130 @@ function validateEmployee(body, countryCode) {
     position,
     branch,
     systemRole,
+    permissions: normalizePermissions(body.permissions, systemRole),
   };
 }
 
+let employeesTablePromise = null;
+
 async function ensureEmployeesTable() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS employees (
-    id BIGSERIAL PRIMARY KEY,
-    company_id INT NOT NULL,
-    seed_key VARCHAR(80) NULL,
-    first_name VARCHAR(120) NOT NULL,
-    last_name VARCHAR(120) NOT NULL,
-    second_last_name VARCHAR(120) NULL,
-    email VARCHAR(180) NOT NULL,
-    birth_date DATE NULL,
-    birth_place VARCHAR(120) NULL,
-    gender VARCHAR(30) NOT NULL DEFAULT 'No especificado',
-    identity_number VARCHAR(255) NULL,
-    tax_number VARCHAR(255) NULL,
-    social_security_number VARCHAR(255) NULL,
-    identity_blind_index VARCHAR(100) NULL,
-    position VARCHAR(120) NOT NULL,
-    branch VARCHAR(120) NOT NULL,
-    system_role VARCHAR(40) NOT NULL DEFAULT 'Empleado',
-    status VARCHAR(30) NOT NULL DEFAULT 'Activo',
-    created_by INT NULL,
-    deleted_by INT NULL,
-    deleted_at TIMESTAMP NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_employee_email_company UNIQUE (company_id, email),
-    CONSTRAINT uq_employee_seed_company UNIQUE (company_id, seed_key)
-  )`);
+  if (!employeesTablePromise) {
+    employeesTablePromise = (async () => {
+      await pool.query(`CREATE TABLE IF NOT EXISTS employees (
+        id BIGSERIAL PRIMARY KEY,
+        company_id INT NOT NULL,
+        seed_key VARCHAR(80) NULL,
+        first_name VARCHAR(120) NOT NULL,
+        last_name VARCHAR(120) NOT NULL,
+        second_last_name VARCHAR(120) NULL,
+        email VARCHAR(180) NOT NULL,
+        birth_date DATE NULL,
+        birth_place VARCHAR(120) NULL,
+        gender VARCHAR(30) NOT NULL DEFAULT 'No especificado',
+        identity_number VARCHAR(255) NULL,
+        tax_number VARCHAR(255) NULL,
+        social_security_number VARCHAR(255) NULL,
+        identity_blind_index VARCHAR(100) NULL,
+        position VARCHAR(120) NOT NULL,
+        branch VARCHAR(120) NOT NULL,
+        system_role VARCHAR(40) NOT NULL DEFAULT 'Empleado',
+        status VARCHAR(30) NOT NULL DEFAULT 'Activo',
+        created_by INT NULL,
+        deleted_by INT NULL,
+        deleted_at TIMESTAMP NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT uq_employee_email_company UNIQUE (company_id, email),
+        CONSTRAINT uq_employee_seed_company UNIQUE (company_id, seed_key)
+      )`);
+      await pool.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS identity_blind_index VARCHAR(100) NULL").catch(() => {});
+      await pool.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS permissions_json TEXT NULL").catch(() => {});
+      await pool.query("ALTER TABLE employees ALTER COLUMN identity_number TYPE VARCHAR(255)").catch(() => {});
+      await pool.query("ALTER TABLE employees ALTER COLUMN tax_number TYPE VARCHAR(255)").catch(() => {});
+      await pool.query("ALTER TABLE employees ALTER COLUMN social_security_number TYPE VARCHAR(255)").catch(() => {});
+      await syncApprovedUsersToEmployees();
+    })().catch((error) => {
+      employeesTablePromise = null;
+      throw error;
+    });
+  }
+  return employeesTablePromise;
+}
 
-  await pool.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS identity_blind_index VARCHAR(100) NULL").catch(() => {});
-  await pool.query("ALTER TABLE employees ALTER COLUMN identity_number TYPE VARCHAR(255)").catch(() => {});
-  await pool.query("ALTER TABLE employees ALTER COLUMN tax_number TYPE VARCHAR(255)").catch(() => {});
-  await pool.query("ALTER TABLE employees ALTER COLUMN social_security_number TYPE VARCHAR(255)").catch(() => {});
-
-  const [companies] = await pool.query("SELECT id, code, country_code FROM companies WHERE active = 1");
-  const seeds = [
-    ["mariana", "Mariana", "Lopez", "Rivera", "Encargada de Inventario Textil", "Bodega Central", "Inventarios"],
-    ["carlos", "Carlos", "Mejia", "", "Asesor de Ventas de Telas", "Sucursal Principal", "Ventas"],
-    ["ana", "Ana", "Ruiz", "", "Contadora General", "Oficina Central", "Contabilidad"],
-  ];
-  for (const company of companies) {
-    const domain = company.code === "TELAS_OLIMPICA_MX" ? "telasolimpica.mx" : company.code === "GRUPO_CIRSA_HN" ? "grupocirsa.hn" : "vicmar.hn";
-    for (const [seedKey, firstName, lastName, secondLastName, position, branch, role] of seeds) {
-      await pool.query(
-        `INSERT INTO employees
-         (company_id, seed_key, first_name, last_name, second_last_name, email, position, branch, system_role)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT (company_id, seed_key) DO NOTHING`,
-        [company.id, seedKey, firstName, lastName, secondLastName || null, `${seedKey}@${domain}`, position, branch, role]
+async function syncApprovedUsersToEmployees() {
+  try {
+    const [users] = await pool.query(
+      `SELECT id, company_id, first_name, last_name, second_last_name, email, role
+       FROM users
+       WHERE is_global_admin = 0 AND status = 'Activo' AND company_id IS NOT NULL`
+    );
+    for (const u of users) {
+      const [existing] = await pool.query(
+        "SELECT id FROM employees WHERE company_id = ? AND email = ? LIMIT 1",
+        [u.company_id, u.email]
       );
+      if (!existing.length) {
+        const defaultBranch = Number(u.company_id) === 2 ? "Sucursal Principal CDMX" : "Sucursal Principal";
+        const defaultPosition =
+          u.role && u.role !== "Empleado" ? `Especialista de ${u.role}` : "Auxiliar Operativo Textil";
+        await pool.query(
+          `INSERT INTO employees
+           (company_id, first_name, last_name, second_last_name, email, gender, position, branch, system_role, status)
+           VALUES (?, ?, ?, ?, ?, 'No especificado', ?, ?, ?, 'Activo')`,
+          [
+            u.company_id,
+            u.first_name,
+            u.last_name,
+            u.second_last_name || null,
+            u.email,
+            defaultPosition,
+            defaultBranch,
+            u.role || "Empleado",
+          ]
+        );
+      }
     }
+  } catch {
+    // Ignore sync errors if users table is not ready yet
   }
 }
 
 async function getCompany(companyId) {
-  const [rows] = await pool.query("SELECT id, name, country_code FROM companies WHERE id = ? AND active = 1 LIMIT 1", [companyId]);
-  if (!rows.length) throw new Error("La empresa seleccionada no esta disponible.");
-  return rows[0];
+  const companies = await listCompanies();
+  const found = companies.find((c) => Number(c.id) === Number(companyId));
+  if (!found) throw new Error("La empresa seleccionada no esta disponible.");
+  return { id: found.id, name: found.name, country_code: found.countryCode };
 }
 
 async function listEmployees(user, query = {}) {
   await ensureEmployeesTable();
-  const companyId = resolveCompanyId(user, query.companyId);
-  await getCompany(companyId);
+  requireAdminRole(user);
   const { limit, offset } = parsePagination(query, 100, 500);
-  const values = [companyId];
-  let statusCondition = "status <> 'Eliminado'";
-  if (["Activo", "Inactivo"].includes(query.status)) {
-    statusCondition = "status = ?";
-    values.push(query.status);
+  const isAllCompanies = Boolean(user?.isGlobalAdmin && String(query.companyId || "").toLowerCase() === "all");
+
+  const values = [];
+  const conditions = [];
+
+  if (!isAllCompanies) {
+    const companyId = resolveCompanyId(user, query.companyId);
+    await getCompany(companyId);
+    conditions.push("e.company_id = ?");
+    values.push(companyId);
   }
+
+  if (["Activo", "Inactivo"].includes(query.status)) {
+    conditions.push("e.status = ?");
+    values.push(query.status);
+  } else {
+    conditions.push("e.status <> 'Eliminado'");
+  }
+
   values.push(limit, offset);
   const [rows] = await pool.query(
     `SELECT ${EMPLOYEE_COLUMNS}
      FROM employees e
      JOIN companies c ON c.id = e.company_id
-     WHERE e.company_id = ? AND e.${statusCondition}
+     WHERE ${conditions.join(" AND ")}
      ORDER BY e.first_name, e.last_name
      LIMIT ? OFFSET ?`,
     values
@@ -264,8 +310,8 @@ async function createEmployee(user, body, ipAddress = "local") {
     const [result] = await pool.query(
       `INSERT INTO employees
        (company_id, first_name, last_name, second_last_name, email, birth_date, birth_place, gender, identity_number,
-        tax_number, social_security_number, identity_blind_index, position, branch, system_role, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        tax_number, social_security_number, identity_blind_index, position, branch, system_role, permissions_json, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         companyId,
         valid.firstName,
@@ -282,6 +328,7 @@ async function createEmployee(user, body, ipAddress = "local") {
         valid.position,
         valid.branch,
         valid.systemRole,
+        JSON.stringify(valid.permissions),
         user.id,
       ]
     );
@@ -315,7 +362,7 @@ async function updateEmployee(user, id, body, ipAddress = "local") {
     await pool.query(
       `UPDATE employees SET first_name = ?, last_name = ?, second_last_name = ?, email = ?, birth_date = ?, birth_place = ?,
        gender = ?, identity_number = ?, tax_number = ?, social_security_number = ?, identity_blind_index = ?,
-       position = ?, branch = ?, system_role = ?, updated_at = CURRENT_TIMESTAMP
+       position = ?, branch = ?, system_role = ?, permissions_json = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND company_id = ? AND status <> 'Eliminado'`,
       [
         valid.firstName,
@@ -332,10 +379,27 @@ async function updateEmployee(user, id, body, ipAddress = "local") {
         valid.position,
         valid.branch,
         valid.systemRole,
+        JSON.stringify(valid.permissions),
         Number(id),
         current.companyId,
       ]
     );
+    await pool.query(
+      `UPDATE users
+       SET first_name = ?, last_name = ?, second_last_name = ?, email = ?, role = ?, permissions_json = ?
+       WHERE company_id = ? AND email = ? AND is_global_admin = 0`,
+      [
+        valid.firstName,
+        valid.lastName,
+        valid.secondLastName || null,
+        valid.email,
+        valid.systemRole,
+        JSON.stringify(valid.permissions),
+        current.companyId,
+        current.email,
+      ]
+    ).catch(() => {});
+    clearSessionCache();
     await logSecurityEvent({
       companyId: current.companyId,
       userId: user.id,
@@ -362,6 +426,11 @@ async function deleteEmployee(user, id, confirmation, ipAddress = "local") {
     [`eliminado+${suffix}@empleados.invalid`, user.id, employee.id, employee.companyId]
   );
   if (!result.affectedRows) throw httpError("El empleado ya fue eliminado.", 409);
+  await pool.query(
+    `UPDATE users SET status = 'Inactivo', email = ?
+     WHERE company_id = ? AND email = ? AND is_global_admin = 0`,
+    [`eliminado+${suffix}@empleados.invalid`, employee.companyId, employee.email]
+  ).catch(() => {});
   await logSecurityEvent({
     companyId: employee.companyId,
     userId: user.id,

@@ -6,6 +6,23 @@ const requestedModule = params.get("modulo") || "compras";
 const redirects = { administrador: "./admin.html", actividad: "./bitacora.html", configuracion: "./configuracion.html" };
 const moduleSessionUser = window.gestionUserDb.getCurrentUser() || {};
 
+const STORAGE_PREFIX = "textiles-clean-v2";
+
+(function purgeLegacyLocalStorage() {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("textiles-gh-")) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+  } catch (error) {
+    // Ignore storage access errors
+  }
+})();
+
 function activeUser() {
   return window.gestionUserDb.getCurrentUser() || moduleSessionUser || {};
 }
@@ -28,8 +45,46 @@ if (redirects[requestedModule]) window.location.replace(redirects[requestedModul
 
 const currentKey = modules[requestedModule] ? requestedModule : "compras";
 const currentModule = modules[currentKey];
+
+function getModulePermissionConfig(modKey = currentKey) {
+  const u = activeUser();
+  if (u?.isGlobalAdmin || u?.role === "Administrador") {
+    return {
+      actions: [true, true, true, true],
+      views: Object.keys(modules[modKey]?.views || {}),
+    };
+  }
+  const modPerm = u?.permissions?.[modKey];
+  if (modPerm && Array.isArray(modPerm.actions)) {
+    const allViews = Object.keys(modules[modKey]?.views || {});
+    const allowedViews = Array.isArray(modPerm.views)
+      ? modPerm.views.filter((v) => allViews.includes(v))
+      : allViews;
+    return {
+      actions: [
+        Boolean(modPerm.actions[0]),
+        Boolean(modPerm.actions[1]),
+        Boolean(modPerm.actions[2]),
+        Boolean(modPerm.actions[3]),
+      ],
+      views: allowedViews,
+    };
+  }
+  return {
+    actions: [true, true, true, false],
+    views: Object.keys(modules[modKey]?.views || {}),
+  };
+}
+
+const currentPermConfig = getModulePermissionConfig(currentKey);
 const requestedView = params.get("vista");
-const currentViewKey = currentModule.views[requestedView] ? requestedView : currentModule.defaultView;
+const resolvedDefaultView = currentPermConfig.views.includes(currentModule.defaultView)
+  ? currentModule.defaultView
+  : currentPermConfig.views[0] || currentModule.defaultView;
+const currentViewKey =
+  currentModule.views[requestedView] && currentPermConfig.views.includes(requestedView)
+    ? requestedView
+    : resolvedDefaultView;
 const currentView = currentModule.views[currentViewKey];
 const storageKey = rowsStorageKey(currentKey, currentViewKey);
 const metricsContainer = document.querySelector("#module-metrics");
@@ -59,33 +114,17 @@ let posTaxName = activeUser().countryCode === "MX" ? "IVA" : "ISV";
 let posTaxRate = Number(activeUser().taxRate ?? (activeUser().countryCode === "MX" ? 16 : 15));
 
 function rowsStorageKey(moduleKey, viewKey) {
-  return `textiles-gh-c${activeCompanyId()}-${moduleKey}-${viewKey}-rows`;
+  return `${STORAGE_PREFIX}-c${activeCompanyId()}-${moduleKey}-${viewKey}-rows`;
 }
 
 function normalizeDatasetRows(moduleKey, viewKey, datasetRows) {
-  if (moduleKey === "ventas" && viewKey === "cotizaciones") {
-    return datasetRows.map((row) => {
-      if (row.length !== 6) return row;
-      const normalized = [...row];
-      normalized[0] = normalized[0].replace(/^COT-/, "PRO-");
-      normalized.splice(5, 0, "Exento");
-      return normalized;
-    });
-  }
-  if (moduleKey === "ventas" && viewKey === "pedidos") {
-    return datasetRows.map((row) => {
-      if (row.length !== 7) return row;
-      const detail = String(row[2] || "");
-      const quantity = detail.match(/[+-]?\d+(?:[.,]\d+)?/)?.[0] || "1";
-      const product = detail.replace(/^[+-]?\d+(?:[.,]\d+)?\s*(?:m|metros?|rollos?|piezas?)?\s*/i, "") || detail;
-      return [row[0], row[1], product, quantity, "Detalle", row[3], row[4], row[5], row[6]];
-    });
-  }
+  if (!Array.isArray(datasetRows)) return [];
   if (moduleKey === "inventarios" && viewKey === "productos") {
     return datasetRows.map((row) => {
-      if (row.length !== 8) return row;
-      const sym = activeUser().currencySymbol || "L";
-      return [row[0], row[1], activeUser().company || "Vicmar", row[2], "Rollo", row[4], row[5], `${sym} 0`, `${sym} 0`, `${sym} 0`, "Sin configurar", row[6], row[7]];
+      if (row.length === 13) {
+        return [row[0], row[1], row[3], row[5], row[6], row[7], row[11], row[12]];
+      }
+      return row;
     });
   }
   return datasetRows;
@@ -111,7 +150,7 @@ async function saveRows() {
   localStorage.setItem(storageKey, JSON.stringify(rows));
   try {
     const saved = await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows, activeCompanyId());
-    rows = rowsWithSerialPlaceholder(saved.rows);
+    rows = rowsWithSerialPlaceholder(normalizeDatasetRows(currentKey, currentViewKey, saved.rows));
     localStorage.setItem(storageKey, JSON.stringify(rows));
     refreshDataView();
   } catch (error) {
@@ -122,21 +161,17 @@ async function saveRows() {
 async function syncDataset() {
   try {
     const dataset = await window.gestionUserDb.getDataset(currentKey, currentViewKey, activeCompanyId());
-    if (dataset.initialized) {
+    if (dataset.initialized && Array.isArray(dataset.rows)) {
       rows = rowsWithSerialPlaceholder(normalizeDatasetRows(currentKey, currentViewKey, dataset.rows));
       if (rows.some((row) => row.at(-1) === "Asignando...")) {
         const saved = await window.gestionUserDb.saveDataset(currentKey, currentViewKey, rows, activeCompanyId());
-        rows = rowsWithSerialPlaceholder(saved.rows);
+        rows = rowsWithSerialPlaceholder(normalizeDatasetRows(currentKey, currentViewKey, saved.rows));
       }
-      localStorage.setItem(storageKey, JSON.stringify(rows));
     } else {
-      const initialRows = rowsWithSerialPlaceholder(
-        (currentView.rows || []).map((row) => row.map((cell) => localizeBusinessText(cell)))
-      );
-      const saved = await window.gestionUserDb.saveDataset(currentKey, currentViewKey, initialRows, activeCompanyId());
-      rows = rowsWithSerialPlaceholder(saved.rows);
-      localStorage.setItem(storageKey, JSON.stringify(rows));
+      rows = [];
     }
+    localStorage.setItem(storageKey, JSON.stringify(rows));
+
     if (typeof currentView.metrics === "string") {
       const relatedDatasets = metricDependencies(currentView.metrics).filter(
         ([moduleKey, viewKey]) => moduleKey !== currentKey || viewKey !== currentViewKey
@@ -145,9 +180,10 @@ async function syncDataset() {
         relatedDatasets.map(async ([moduleKey, viewKey]) => {
           try {
             const related = await window.gestionUserDb.getDataset(moduleKey, viewKey, activeCompanyId());
-            if (related.initialized) {
-              localStorage.setItem(rowsStorageKey(moduleKey, viewKey), JSON.stringify(related.rows));
-            }
+            const cleanRelated = related.initialized && Array.isArray(related.rows)
+              ? normalizeDatasetRows(moduleKey, viewKey, related.rows)
+              : [];
+            localStorage.setItem(rowsStorageKey(moduleKey, viewKey), JSON.stringify(cleanRelated));
           } catch (error) {
             // Conserva copia local en caso de error de red puntual.
           }
@@ -187,7 +223,8 @@ function navigate(moduleKey, viewKey) {
 }
 
 function renderTabs() {
-  const entries = Object.entries(currentModule.views);
+  const perm = getModulePermissionConfig(currentKey);
+  const entries = Object.entries(currentModule.views).filter(([key]) => perm.views.includes(key));
   tabs.hidden = entries.length < 2;
   tabs.innerHTML = entries
     .map(
@@ -206,27 +243,28 @@ function numericValue(value) {
 
 function purchaseRows(viewKey) {
   if (currentKey === "compras" && viewKey === currentViewKey) return rows;
-  const viewDefinition = modules.compras.views[viewKey];
+  const viewDefinition = modules.compras?.views?.[viewKey];
   return loadRows("compras", viewKey, viewDefinition?.rows || []);
 }
 
 function moduleRows(moduleKey, viewKey) {
   if (currentKey === moduleKey && viewKey === currentViewKey) return rows;
-  const viewDefinition = modules[moduleKey]?.views[viewKey];
+  const viewDefinition = modules[moduleKey]?.views?.[viewKey];
   return loadRows(moduleKey, viewKey, viewDefinition?.rows || []);
 }
 
 function metricDependencies(metricType) {
   const dependencies = {
-    "purchase-suppliers": [["compras", "proveedores"], ["compras", "comparativo"]],
+    "purchase-suppliers": [["compras", "proveedores"]],
     "purchase-orders": [["compras", "proveedores"], ["compras", "ordenes"], ["compras", "recepciones"]],
     "purchase-payables": [["compras", "pagos"]],
     "sales-clients": [["ventas", "clientes"], ["ventas", "cobranza"]],
     "sales-invoices": [["ventas", "clientes"], ["ventas", "pedidos"], ["ventas", "facturas"]],
     "sales-receivables": [["ventas", "cobranza"]],
     "inventory-products": [["inventarios", "productos"], ["inventarios", "almacenes"]],
-    "accounting-summary": [["contabilidad", "bancos"], ["contabilidad", "cierres"], ["ventas", "cobranza"], ["compras", "pagos"]],
-    "cost-analysis": [["costos", "analisis"], ["costos", "margenes"], ["inventarios", "productos"]],
+    "accounting-summary": [["contabilidad", "bancos"], ["contabilidad", "movimientos"], ["ventas", "cobranza"], ["compras", "pagos"]],
+    "cost-analysis": [["costos", "hojas"], ["costos", "margenes"], ["inventarios", "productos"]],
+    "global-reports": [["ventas", "facturas"], ["inventarios", "productos"], ["compras", "ordenes"], ["contabilidad", "movimientos"]],
   };
   return dependencies[metricType] || [];
 }
@@ -248,14 +286,14 @@ function operationalMetrics(metricType) {
   if (metricType === "inventory-products") {
     const products = moduleRows("inventarios", "productos");
     const warehouses = moduleRows("inventarios", "almacenes").filter((row) => /activo/i.test(row[6]));
-    const active = products.filter((row) => /activo/i.test(row[11]));
-    const lowStock = products.filter((row) => /bajo minimo|existencia negativa/i.test(row[11]));
-    const stock = totalAt(products.filter((row) => !/inactivo/i.test(row[11])), 6);
-    const negativeStock = products.filter((row) => numericValue(row[6]) < 0);
-    const categories = new Set(active.map((row) => row[3]).filter(Boolean)).size;
+    const active = products.filter((row) => /activo/i.test(row[6]));
+    const lowStock = products.filter((row) => /bajo minimo|existencia negativa/i.test(row[6]));
+    const stock = totalAt(products.filter((row) => !/inactivo/i.test(row[6])), 4);
+    const negativeStock = products.filter((row) => numericValue(row[4]) < 0);
+    const categories = new Set(active.map((row) => row[2]).filter(Boolean)).size;
     return [
       ["Productos activos", String(active.length), `${categories} categorias textiles`],
-      ["Existencia total", `${stock.toLocaleString(u.locale || "es-HN")} m / rollos`, `En ${warehouses.length} almacenes activos`],
+      ["Existencia total", `${stock.toLocaleString(u.locale || "es-HN")} unid.`, `En ${warehouses.length} almacenes activos`],
       ["Bajo minimo", String(lowStock.length), "Requieren abastecimiento"],
       ["Existencia negativa", String(negativeStock.length), negativeStock.length ? "Requiere regularizacion" : "Inventario regularizado"],
     ];
@@ -263,36 +301,41 @@ function operationalMetrics(metricType) {
 
   if (metricType === "accounting-summary") {
     const bankRows = moduleRows("contabilidad", "bancos");
+    const journalRows = moduleRows("contabilidad", "movimientos");
     const receivables = moduleRows("ventas", "cobranza").filter((row) => !/pagado/i.test(row[6]));
     const payables = moduleRows("compras", "pagos").filter((row) => !/pagado/i.test(row[6]));
-    const closingTasks = moduleRows("contabilidad", "cierres");
-    const completed = closingTasks.filter((row) => /completado/i.test(row[5]));
     const reconciled = bankRows.filter((row) => /conciliado/i.test(row[6]));
-    const balance = totalAt(bankRows, 5) - totalAt(bankRows, 4);
+    const balance = totalAt(bankRows, 5);
     return [
       ["Saldo en bancos", currency(balance), `${reconciled.length} de ${bankRows.length} movimientos conciliados`],
       ["Cuentas por cobrar", currency(totalAt(receivables, 4)), `${receivables.length} facturas abiertas`],
       ["Cuentas por pagar", currency(totalAt(payables, 4)), `${payables.length} documentos pendientes`],
-      ["Cierre del periodo", `${closingTasks.length ? Math.round((completed.length / closingTasks.length) * 100) : 0}%`, `${completed.length} de ${closingTasks.length} tareas completadas`],
+      ["Polizas contables", String(journalRows.length), "Movimientos registrados en el diario"],
     ];
   }
 
   if (metricType === "cost-analysis") {
-    const analyses = moduleRows("costos", "analisis");
-    const products = moduleRows("inventarios", "productos");
-    const minimumMargins = moduleRows("costos", "margenes").map((row) => numericValue(row[2])).filter((value) => value > 0);
-    const minimumMargin = minimumMargins.length ? Math.max(...minimumMargins) : 30;
-    const productStock = new Map(products.map((row) => [row[0], numericValue(row[6])]));
-    const inventoryCost = analyses.reduce((sum, row) => sum + numericValue(row[2]) * Math.max(0, productStock.get(row[0]) || 0), 0);
-    const margins = analyses.map((row) => numericValue(row[5]));
-    const rotations = analyses.map((row) => numericValue(row[6])).filter((value) => value > 0);
-    const average = (values) => (values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0);
-    const lowMargin = margins.filter((margin) => margin < minimumMargin).length;
+    const sheets = moduleRows("costos", "hojas");
+    const marginsList = moduleRows("costos", "margenes");
+    const avgCost = sheets.length ? totalAt(sheets, 5) / sheets.length : 0;
+    const avgTargetMargin = marginsList.length ? totalAt(marginsList, 3) / marginsList.length : 0;
     return [
-      ["Costo de inventario", currency(inventoryCost), `${analyses.length} telas costeadas`],
-      ["Margen promedio", `${average(margins).toFixed(1)}%`, `Calculado sobre ${margins.length} telas`],
-      ["Telas bajo margen", String(lowMargin), `Margen minimo de referencia: ${minimumMargin}%`],
-      ["Rotacion promedio", `${Math.round(average(rotations))} dias`, `${rotations.length} telas analizadas`],
+      ["Hojas de costo", String(sheets.length), "Lotes textiles costeados"],
+      ["Costo unitario prom.", currency(avgCost, 2), `Sobre ${sheets.length} hojas registradas`],
+      ["Politicas de margen", String(marginsList.length), "Categorias configuradas"],
+      ["Margen objetivo prom.", `${avgTargetMargin.toFixed(1)}%`, "Meta comercial configurada"],
+    ];
+  }
+
+  if (metricType === "global-reports") {
+    const invoices = moduleRows("ventas", "facturas");
+    const products = moduleRows("inventarios", "productos");
+    const orders = moduleRows("compras", "ordenes");
+    return [
+      ["Reportes disponibles", String(reports.length), "Listos para descarga en CSV"],
+      ["Facturas emitidas", String(invoices.length), "En Ventas"],
+      ["Telas en catalogo", String(products.length), "En Inventarios"],
+      ["Ordenes de compra", String(orders.length), "En Compras"],
     ];
   }
   return [];
@@ -348,28 +391,24 @@ function purchaseMetrics(metricType) {
   const suppliers = purchaseRows("proveedores");
   const orders = purchaseRows("ordenes");
   const receipts = purchaseRows("recepciones");
-  const comparisons = purchaseRows("comparativo");
   const payables = purchaseRows("pagos");
   const activeSuppliers = suppliers.filter((row) => String(row[6]).toLowerCase() === "activo");
   const openOrders = orders.filter((row) => !/recibida|cancelada/i.test(row[5]));
   const inTransit = orders.filter((row) => /transito/i.test(row[5]));
   const validReceipts = receipts.filter((row) => /validada/i.test(row[6]));
-  const deliveryDays = comparisons.map((row) => numericValue(row[3])).filter((value) => value > 0);
-  const complianceRates = comparisons.map((row) => numericValue(row[5]));
-  const average = (values) => (values.length ? values.reduce((total, value) => total + value, 0) / values.length : 0);
   const fmtCurrency = (value) => currency(Math.round(value), 0);
 
   if (metricType === "purchase-suppliers") {
     return [
       ["Proveedores activos", String(activeSuppliers.length), `${suppliers.length} proveedores registrados`],
       ["Credito disponible", fmtCurrency(suppliers.reduce((total, row) => total + numericValue(row[4]), 0)), `${suppliers.filter((row) => numericValue(row[4]) > 0).length} lineas autorizadas`],
-      ["Entrega promedio", `${average(deliveryDays).toFixed(1)} dias`, `${deliveryDays.length} ofertas comparadas`],
-      ["Cumplimiento", `${Math.round(average(complianceRates))}%`, `${complianceRates.length} evaluaciones de proveedor`],
+      ["Con saldo abierto", String(suppliers.filter((row) => numericValue(row[5]) > 0).length), "Proveedores con saldo por pagar"],
+      ["Saldo acumulado", fmtCurrency(suppliers.reduce((total, row) => total + numericValue(row[5]), 0)), "En cuentas de proveedores"],
     ];
   }
   if (metricType === "purchase-orders") {
     return [
-      ["Ordenes abiertas", String(openOrders.length), `${openOrders.filter((row) => /pendiente/i.test(row[5])).length} requieren aprobacion`],
+      ["Ordenes abiertas", String(openOrders.length), `${openOrders.filter((row) => /pendiente|borrador/i.test(row[5])).length} en gestion`],
       ["En transito", fmtCurrency(inTransit.reduce((total, row) => total + numericValue(row[4]), 0)), `${inTransit.length} ordenes en camino`],
       ["Proveedores activos", String(activeSuppliers.length), `${suppliers.length} proveedores registrados`],
       ["Recepciones conformes", `${receipts.length ? Math.round((validReceipts.length / receipts.length) * 100) : 0}%`, `${validReceipts.length} de ${receipts.length} recepciones validadas`],
@@ -416,15 +455,22 @@ function statusClass(value) {
 }
 
 function renderActions(index) {
+  const perm = getModulePermissionConfig(currentKey);
+  const canEdit = perm.actions[2];
+  const canDelete = perm.actions[3];
   const actions = [];
-  if (currentView.workflow) {
+  if (currentView.workflow && canEdit) {
     actions.push(
       `<button class="module-workflow-action" type="button" data-action="workflow" title="${escapeHtml(currentView.workflow.label)}">${escapeHtml(currentView.workflow.label)}</button>`
     );
   }
   if (currentView.fields) {
-    actions.push('<button type="button" data-action="edit" title="Editar" aria-label="Editar"><img src="./assets/icons/inventory-edit.svg" alt="" /></button>');
-    actions.push('<button type="button" data-action="delete" title="Eliminar" aria-label="Eliminar"><img src="./assets/icons/inventory-delete.svg" alt="" /></button>');
+    if (canEdit) {
+      actions.push('<button type="button" data-action="edit" title="Editar" aria-label="Editar"><img src="./assets/icons/inventory-edit.svg" alt="" /></button>');
+    }
+    if (canDelete) {
+      actions.push('<button type="button" data-action="delete" title="Eliminar" aria-label="Eliminar"><img src="./assets/icons/inventory-delete.svg" alt="" /></button>');
+    }
   }
   return `<span class="row-actions" data-index="${index}">${actions.join("")}</span>`;
 }
@@ -438,12 +484,12 @@ function filteredRows() {
   return rows
     .map((row, index) => ({ row, index }))
     .filter(({ row }) => {
-      const quantity = currentKey === "inventarios" && currentViewKey === "productos" ? numericValue(row[6]) : 0;
+      const quantity = currentKey === "inventarios" && currentViewKey === "productos" ? numericValue(row[4]) : 0;
       const matchesStock = !stock || (stock === "negative" ? quantity < 0 : stock === "positive" ? quantity > 0 : quantity === 0);
       return (
         row.join(" ").toLowerCase().includes(term) &&
         (!status || row[statusIndex] === status) &&
-        (!category || row[3] === category) &&
+        (!category || row[2] === category) &&
         matchesStock
       );
     });
@@ -459,11 +505,16 @@ function renderTable() {
   } else {
     displayColumns.push("No. de serie");
   }
+  const expectedDataCells = hasActionsColumn ? displayColumns.length - 1 : displayColumns.length;
 
   const body = visibleRows
     .map(({ row, index }) => {
-      const serialIndex = row.length - 1;
-      const cells = row
+      const alignedRow = row.slice(0, expectedDataCells);
+      while (alignedRow.length < expectedDataCells) {
+        alignedRow.push(alignedRow.length === expectedDataCells - 1 ? "Asignando..." : "-");
+      }
+      const serialIndex = alignedRow.length - 1;
+      const cells = alignedRow
         .map((cell, cellIndex) => {
           const renderedText = escapeHtml(localizeBusinessText(cell));
           if (cellIndex === statusIndex) {
@@ -475,7 +526,7 @@ function renderTable() {
           return `<span>${renderedText}</span>`;
         })
         .join("");
-      return `<div class="module-table-row" data-row-index="${index}">${cells}${renderActions(index)}</div>`;
+      return `<div class="module-table-row" data-row-index="${index}">${cells}${hasActionsColumn ? renderActions(index) : ""}</div>`;
     })
     .join("");
 
@@ -483,7 +534,7 @@ function renderTable() {
     <div class="module-table-row module-table-head">${displayColumns
       .map((column) => `<span>${escapeHtml(localizeBusinessText(column))}</span>`)
       .join("")}</div>${body}</div>
-    ${visibleRows.length ? "" : '<p class="module-empty-state">No hay registros que coincidan con los filtros seleccionados.</p>'}</div>`;
+    ${visibleRows.length ? "" : '<p class="module-empty-state">Aun no hay registros en esta vista. Usa el boton superior para agregar el primero.</p>'}</div>`;
 }
 
 function renderFilterOptions() {
@@ -499,7 +550,7 @@ function renderFilterOptions() {
         .join("");
   }
   if (currentKey === "inventarios" && currentViewKey === "productos") {
-    const categories = [...new Set(rows.map((row) => row[3]).filter(Boolean))];
+    const categories = [...new Set(rows.map((row) => row[2]).filter(Boolean))];
     let categorySelect = document.querySelector("#inventory-category-filter");
     if (!categorySelect) {
       filterControl.insertAdjacentHTML(
@@ -527,12 +578,12 @@ function refreshDataView() {
 }
 
 function handleStoredRowsChange(event) {
-  if (!event.key?.startsWith(`textiles-gh-c${activeCompanyId()}-`) || event.newValue === null) return;
+  if (!event.key?.startsWith(`${STORAGE_PREFIX}-c${activeCompanyId()}-`) || event.newValue === null) return;
 
   if (event.key === storageKey) {
     try {
       const savedRows = JSON.parse(event.newValue);
-      if (Array.isArray(savedRows)) rows = savedRows;
+      if (Array.isArray(savedRows)) rows = normalizeDatasetRows(currentKey, currentViewKey, savedRows);
     } catch (error) {
       return;
     }
@@ -542,7 +593,7 @@ function handleStoredRowsChange(event) {
 
   if (
     typeof currentView.metrics === "string" &&
-    metricDependencies(currentView.metrics).some(([moduleKey]) => event.key.startsWith(`textiles-gh-c${activeCompanyId()}-${moduleKey}-`))
+    metricDependencies(currentView.metrics).some(([moduleKey]) => event.key.startsWith(`${STORAGE_PREFIX}-c${activeCompanyId()}-${moduleKey}-`))
   ) {
     renderMetrics();
   }
@@ -590,28 +641,18 @@ function renderGuides() {
   draw();
 }
 
-const defaultPosProducts = [
-  { id: "TELA-00142", name: "Manta cruda 1.50 m", stock: "500 m", price: 37, unit: "m" },
-  { id: "TELA-00098", name: "Lino premium azul", stock: "240 m", price: 55, unit: "m" },
-  { id: "TELA-00215", name: "Popelina floral", stock: "180 m", price: 31, unit: "m" },
-  { id: "TELA-00176", name: "Mezclilla indigo 12 oz", stock: "420 m", price: 99, unit: "m" },
-  { id: "TELA-00208", name: "Gabardina gris Oxford", stock: "315 m", price: 72, unit: "m" },
-  { id: "TELA-00231", name: "Satin carmesi", stock: "175 m", price: 86, unit: "m" },
-];
-
 function getPosProducts() {
   const inventoryRows = moduleRows("inventarios", "productos");
-  if (!inventoryRows.length) return defaultPosProducts;
-  const mapped = inventoryRows
-    .filter((row) => !/inactivo/i.test(String(row[11] || "")))
+  if (!inventoryRows.length) return [];
+  return inventoryRows
+    .filter((row) => !/inactivo/i.test(String(row[6] || "")))
     .map((row) => ({
-      id: String(row[0] || "TELA-00000"),
+      id: String(row[0] || "TELA-0001"),
       name: String(row[1] || "Tela comercial"),
-      stock: `${row[6] || "0"} ${String(row[5] || "m").toLowerCase()}`,
-      price: Math.max(1, numericValue(row[7]) || 35),
-      unit: String(row[5] || "Metro").toLowerCase().startsWith("rollo") ? "rollo" : "m",
+      stock: `${row[4] || "0"} ${String(row[3] || "m").toLowerCase()}`,
+      price: Math.max(0.01, numericValue(row[5]) || 1),
+      unit: String(row[3] || "Metro").toLowerCase().startsWith("rollo") ? "rollo" : "m",
     }));
-  return mapped.length ? mapped : defaultPosProducts;
 }
 
 function money(value) {
@@ -625,7 +666,7 @@ function money(value) {
 
 function renderPosProducts(products) {
   if (!products.length) {
-    return '<p class="module-empty-state">No hay telas que coincidan con la busqueda.</p>';
+    return '<p class="module-empty-state">Aun no hay telas registradas en Inventarios. Agrega productos en Inventarios &gt; Productos para vender en mostrador.</p>';
   }
   return products
     .map(
@@ -649,7 +690,7 @@ function renderPos() {
   const tax = subtotal * (taxRate / 100);
   const total = subtotal + tax;
   view.innerHTML = `<div class="pos-layout"><section class="pos-products">
-    <div class="pos-section-heading"><div><h2>Catalogo de telas en mostrador</h2><p>Selecciona rollos o metros para agregar a la factura de mostrador.</p></div><label class="search-control pos-search"><img src="./assets/icons/inventory-search.svg" alt="" /><input id="pos-search" type="search" placeholder="Buscar tela o codigo..." /></label></div>
+    <div class="pos-section-heading"><div><h2>Catalogo de telas en mostrador</h2><p>Selecciona rollos o metros registrados en inventario para agregar a la venta.</p></div><label class="search-control pos-search"><img src="./assets/icons/inventory-search.svg" alt="" /><input id="pos-search" type="search" placeholder="Buscar tela o codigo..." /></label></div>
     <div class="pos-product-grid" id="pos-product-grid">${renderPosProducts(availableProducts)}</div></section>
     <aside class="pos-cart"><div class="pos-cart-heading"><div><h2>Venta de mostrador</h2><p>${escapeHtml(
       activeUser().company || "Sucursal Principal"
@@ -845,7 +886,9 @@ async function appendTargetRow(moduleKey, viewKey, row) {
   let targetRows = loadRows(moduleKey, viewKey, targetView.rows || []);
   try {
     const dataset = await window.gestionUserDb.getDataset(moduleKey, viewKey, activeCompanyId());
-    if (dataset.initialized) targetRows = dataset.rows;
+    if (dataset.initialized && Array.isArray(dataset.rows)) {
+      targetRows = normalizeDatasetRows(moduleKey, viewKey, dataset.rows);
+    }
   } catch (error) {
     // Se conserva la copia sincronizada en caso de fallo de red temporal.
   }
@@ -905,7 +948,9 @@ async function nextTargetDocument(moduleKey, viewKey) {
   let targetRows = loadRows(moduleKey, viewKey, targetView.rows || []);
   try {
     const dataset = await window.gestionUserDb.getDataset(moduleKey, viewKey, activeCompanyId());
-    if (dataset.initialized) targetRows = normalizeDatasetRows(moduleKey, viewKey, dataset.rows);
+    if (dataset.initialized && Array.isArray(dataset.rows)) {
+      targetRows = normalizeDatasetRows(moduleKey, viewKey, dataset.rows);
+    }
   } catch (error) {
     // Utiliza la copia local si el servidor no responde.
   }
@@ -987,12 +1032,12 @@ function exportReport(index = 0) {
     ["ventas", "facturas"],
     ["inventarios", "productos"],
     ["compras", "ordenes"],
-    ["costos", "analisis"],
+    ["costos", "hojas"],
     ["ventas", "cobranza"],
     ["contabilidad", "movimientos"],
   ];
   const [targetModule, targetView] = currentView.type === "reports" ? reportSources[index] || ["ventas", "facturas"] : [currentKey, currentViewKey];
-  const viewDef = modules[targetModule]?.views[targetView] || currentView;
+  const viewDef = modules[targetModule]?.views?.[targetView] || currentView;
   const datasetRows = targetModule === currentKey && targetView === currentViewKey ? rows : moduleRows(targetModule, targetView);
   const headers = [...(viewDef.columns || ["Columna"])];
   if (headers.at(-1) === "Acciones") {
@@ -1017,18 +1062,6 @@ function handlePrimaryAction() {
     return;
   }
   if (currentView.fields) return openForm();
-  if (currentView.specialAction === "recalculate") {
-    const original = actionButton.textContent;
-    actionButton.disabled = true;
-    actionButton.textContent = "Recalculando...";
-    window.setTimeout(() => {
-      actionButton.disabled = false;
-      actionButton.textContent = original;
-      renderMetrics();
-      showToast("Costos promedio y margenes textiles actualizados.");
-    }, 600);
-    return;
-  }
   if (/exportar/i.test(currentView.action || "")) return exportReport();
 }
 
@@ -1041,10 +1074,11 @@ function initializePage() {
   renderTabs();
   renderMetrics();
 
+  const perm = getModulePermissionConfig(currentKey);
+  const canCreate = perm.actions[1];
   const hasValidPrimaryAction =
-    Boolean(currentView.fields) ||
+    (Boolean(currentView.fields) && canCreate) ||
     currentView.type === "accounting-hub" ||
-    currentView.specialAction === "recalculate" ||
     /exportar/i.test(currentView.action || "");
   actionButton.hidden = !currentView.action || !hasValidPrimaryAction;
   actionButton.textContent = currentView.action || "";
@@ -1056,9 +1090,26 @@ function initializePage() {
     showToast(flash);
   }
 
-  if (currentView.type === "reports") return renderReports();
+  if (currentView.type === "reports") {
+    renderReports();
+    syncDataset();
+    return;
+  }
   if (currentView.type === "help") return renderGuides();
-  if (currentView.type === "pos") return renderPos();
+  if (currentView.type === "pos") {
+    renderPos();
+    window.gestionUserDb
+      .getDataset("inventarios", "productos", activeCompanyId())
+      .then((dataset) => {
+        const cleanRows = dataset.initialized && Array.isArray(dataset.rows)
+          ? normalizeDatasetRows("inventarios", "productos", dataset.rows)
+          : [];
+        localStorage.setItem(rowsStorageKey("inventarios", "productos"), JSON.stringify(cleanRows));
+        renderPos();
+      })
+      .catch(() => {});
+    return;
+  }
   if (currentView.type === "accounting-hub") return renderAccountingHub();
 
   toolbar.hidden = false;

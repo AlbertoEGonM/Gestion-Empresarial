@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=9" />
   </head>
   <body data-admin-only="true">
     <main class="app-layout">
@@ -48,7 +48,7 @@
         <section class="content-area">
           <header class="page-title">
             <h1>Roles y Privilegios Operativos</h1>
-            <p>Asigna el area operativa de cada empleado y consulta la matriz de permisos RBAC por modulo textil.</p>
+            <p>Personaliza los permisos de cada trabajador por modulo, accion (Consultar, Registrar, Editar, Eliminar) y seccion especifica.</p>
           </header>
           <section class="permission-layout">
             <aside class="employee-list">
@@ -61,11 +61,11 @@
               <div class="matrix-heading">
                 <div>
                   <h2 id="permission-employee-title">Selecciona un empleado</h2>
-                  <p id="permission-employee-subtitle">El rol asignado determina los modulos habilitados en el sistema.</p>
+                  <p id="permission-employee-subtitle">Elige una plantilla de rol o activa/desactiva permisos individuales para este trabajador.</p>
                 </div>
                 <div class="permission-role-controls">
                   <label class="employee-filter" for="permission-role-select">
-                    <span>Rol Operativo</span>
+                    <span>Rol Base (Plantilla)</span>
                     <select id="permission-role-select" disabled>
                       <option value="Empleado">Empleado</option>
                       <option value="Inventarios">Inventarios</option>
@@ -74,10 +74,10 @@
                       <option value="Contabilidad">Contabilidad</option>
                     </select>
                   </label>
-                  <button class="submit-button save-record" id="permission-save-btn" type="button" disabled>Guardar rol</button>
+                  <button class="submit-button save-record" id="permission-save-btn" type="button" disabled>Guardar permisos</button>
                 </div>
               </div>
-              <div class="matrix-row head"><span>Modulo Textil</span><span>Consultar</span><span>Registrar</span><span>Editar</span><span>Eliminar</span></div>
+              <div class="matrix-row head"><span>Modulo y Secciones Permitidas</span><span>Consultar</span><span>Registrar</span><span>Editar</span><span>Eliminar</span></div>
               <div id="permission-matrix-rows"></div>
             </section>
           </section>
