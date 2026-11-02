@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check config/env.js && node --check config/crypto-fields.js && node --check config/validator.js && node --check config/file-security.js && node --check config/security.js && node --check config/audit.js && node --check config/db.js && node --check config/connection.js && node --check config/connection-errors.js && node --check config/permissions.js && node --check modules/records.js && node --check modules/accounting.js && node --check modules/employees.js",
+    "check": "node --check server.js && node --check config/env.js && node --check config/crypto-fields.js && node --check config/validator.js && node --check config/file-security.js && node --check config/security.js && node --check config/audit.js && node --check config/db.js && node --check config/connection.js && node --check config/connection-errors.js && node --check config/permissions.js && node --check modules/records.js && node --check modules/accounting.js && node --check modules/employees.js && node --check modules/ledger.js && node --check modules/payroll.js",
     "test": "node --test test/*.test.js",
     "test:security": "node --test test/security.test.js",
     "security:audit": "npm audit --audit-level=high"
   },
   "dependencies": {
+    "pdfkit": "^0.20.2",
     "pg": "^8.16.3",
     "pg-mem": "^3.0.14"
   }

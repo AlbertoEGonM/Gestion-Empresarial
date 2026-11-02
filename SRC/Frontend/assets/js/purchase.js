@@ -53,6 +53,22 @@ function updateResults() {
   const profit = price - cost;
   const profitPercent = cost > 0 ? (profit / cost) * 100 : 0;
   const margin = price > 0 ? (profit / price) * 100 : 0;
+  const qty = Math.max(0, Number(quantityInput.value || 0));
+  const isLb = String(unitSelect.value || "").toLowerCase().includes("libra");
+  const kgVal = isLb ? qty * 0.453592 : qty;
+  const lbVal = isLb ? qty : qty * 2.20462;
+  const weightPreview = document.querySelector("#weight-conversion-preview");
+  if (weightPreview) {
+    if (qty > 0) {
+      const costPerKg = kgVal > 0 ? formatLocalMoney(cost / kgVal) : "-";
+      const costPerLb = lbVal > 0 ? formatLocalMoney(cost / lbVal) : "-";
+      weightPreview.textContent = isLb
+        ? `Conversion automatica: ${lbVal.toFixed(2)} lb = ${kgVal.toFixed(2)} kg  |  Costo: ${costPerLb}/lb (${costPerKg}/kg)`
+        : `Conversion automatica: ${kgVal.toFixed(2)} kg = ${lbVal.toFixed(2)} lb  |  Costo: ${costPerKg}/kg (${costPerLb}/lb)`;
+    } else {
+      weightPreview.textContent = "Conversion automatica: 1.00 kg = 2.20 lb | 1.00 lb = 0.45 kg";
+    }
+  }
 
   if (!cost && !price) {
     profitResult.textContent = "-";
@@ -74,7 +90,7 @@ if (userAtLoad.countryCode === "MX") {
 document.querySelectorAll('input[name="currency"]').forEach((radio) => {
   radio.addEventListener("change", updateCurrencyPrefixes);
 });
-[exchangeRateInput, totalCostInput, totalPriceInput].forEach((input) => {
+[exchangeRateInput, totalCostInput, totalPriceInput, quantityInput, unitSelect].forEach((input) => { input.addEventListener("change", updateResults);
   input.addEventListener("input", updateResults);
 });
 
@@ -90,7 +106,7 @@ form.addEventListener("submit", async (event) => {
   const code = productIdInput.value.trim().toUpperCase();
   const description = descriptionInput.value.trim();
   const quantity = Math.max(0.01, Number(quantityInput.value || 1));
-  const unit = unitSelect.value || "Metro";
+  const unit = unitSelect.value || "Kilogramo (kg)";
   const category = categorySelect.value || "Algodon";
   const isUsd = selectedCurrency() === "USD";
   const rate = isUsd ? Math.max(0.01, Number(exchangeRateInput.value || 1)) : 1;
@@ -130,9 +146,9 @@ form.addEventListener("submit", async (event) => {
       code,
       `ING-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
       "Ingreso de lote",
-      `${quantity} ${unit.toLowerCase()}`,
+      unit.toLowerCase().includes("libra") ? `${quantity.toFixed(2)} lb (${(quantity * 0.453592).toFixed(2)} kg)` : `${quantity.toFixed(2)} kg (${(quantity * 2.20462).toFixed(2)} lb)`,
       "-",
-      `${quantity} ${unit.toLowerCase()}`,
+      unit.toLowerCase().includes("libra") ? `${quantity.toFixed(2)} lb (${(quantity * 0.453592).toFixed(2)} kg)` : `${quantity.toFixed(2)} kg (${(quantity * 2.20462).toFixed(2)} lb)`,
       formatLocalMoney(unitCost),
       "Asignando...",
     ]);

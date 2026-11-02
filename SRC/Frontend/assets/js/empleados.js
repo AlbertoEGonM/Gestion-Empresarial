@@ -59,7 +59,7 @@ function renderEmployees() {
       <div class="employee-name"><b>${initials(employee)}</b><strong>${escapeHtml(
         [employee.firstName, employee.lastName, employee.secondLastName].filter(Boolean).join(" ")
       )}</strong><span>${escapeHtml(employee.email)}</span></div>
-      <span>${escapeHtml(employee.position)}</span><span>${escapeHtml(
+      <span>${escapeHtml(employee.position)}<br><small style="color:#6b7280">Salario: ${Number(employee.baseSalary || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} · Correo: ${employee.payrollEmailEnabled === false ? "NO" : "SI"}</small></span><span>${escapeHtml(
         employee.company ? `${employee.branch} · ${employee.company}` : employee.branch
       )}</span><b class="status ${employee.status === "Activo" ? "complete" : "pending"}">${escapeHtml(employee.systemRole)}</b>
       <span class="row-actions"><a href="./empleado.html?id=${employee.id}" title="Editar empleado" aria-label="Editar empleado"><img src="./assets/icons/inventory-edit.svg" alt="" /></a><button type="button" data-action="delete" title="Eliminar empleado" aria-label="Eliminar empleado"><img src="./assets/icons/inventory-delete.svg" alt="" /></button></span>
@@ -113,6 +113,16 @@ employeeTable.addEventListener("click", (event) => {
 });
 
 document.querySelector("#cancel-delete-employee").addEventListener("click", () => deleteDialog.close());
+document.querySelector("#export-employees-excel")?.addEventListener("click", () => {
+  const columns = ["Empleado", "Correo", "Puesto", "Sucursal", "Area", "Salario Base", "Periodicidad", "Cuenta", "Nomina al Correo"];
+  const rows = employees.map((e) => [[e.firstName, e.lastName, e.secondLastName].filter(Boolean).join(" "), e.email, e.position, e.branch, e.systemRole, Number(e.baseSalary || 0).toFixed(2), e.paymentFrequency || "Quincenal", e.bankAccount || "-", e.payrollEmailEnabled === false ? "NO" : "SI"]);
+  window.gestionExport?.toExcel({ filename: "expedientes-empleados", sheetName: "Empleados", title: "Expedientes de Empleados", columns, rows });
+});
+document.querySelector("#export-employees-pdf")?.addEventListener("click", () => {
+  const columns = ["Empleado", "Correo", "Puesto", "Sucursal", "Salario Base", "Periodicidad", "Cuenta", "Correo SI/NO"];
+  const rows = employees.map((e) => [[e.firstName, e.lastName, e.secondLastName].filter(Boolean).join(" "), e.email, e.position, e.branch, Number(e.baseSalary || 0).toFixed(2), e.paymentFrequency || "Quincenal", e.bankAccount || "-", e.payrollEmailEnabled === false ? "NO" : "SI"]);
+  window.gestionExport?.toPdf({ filename: "expedientes-empleados", title: "Expedientes de Empleados", columns, rows });
+});
 deleteForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   deleteError.hidden = true;

@@ -20,7 +20,8 @@
           <a href="./modulo.html?modulo=compras" data-module="compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas" data-module="ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
           <a href="./modulo.html?modulo=inventarios" data-module="inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
-          <a href="./modulo.html?modulo=contabilidad" data-module="contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./contabilidad.html" data-module="contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./nomina.html" data-module="nomina"><img src="./assets/icons/nomina.svg" alt="" />N&oacute;mina</a>
         </nav>
         <div class="user-box">
           <div class="avatar">--</div>
@@ -57,7 +58,7 @@
             </label>
             <label class="module-filter" for="module-filter">
               <span>Estado</span>
-              <select id="module-filter"><option value="">Todos</option></select>
+              <select id="module-filter"><option value="">Todos</option></select></label><div class="module-toolbar-actions"><button class="secondary-action" id="module-export-excel" type="button">Exportar Excel (.xlsx)</button><button class="secondary-action" id="module-export-pdf" type="button">Exportar PDF</button></div><label hidden>
             </label>
           </section>
           <section id="module-view" aria-live="polite"></section>
@@ -82,6 +83,7 @@
     </dialog>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/export-utils.js"></script>
     <script src="./assets/js/module-data.js"></script>
     <script src="./assets/js/module.js"></script>
   </body>

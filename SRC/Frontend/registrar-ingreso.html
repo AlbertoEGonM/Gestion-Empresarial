@@ -20,7 +20,7 @@
             <img src="./assets/icons/form-breadcrumb.svg" alt="" />
             <strong>Ingreso y Costeo de Lote Textil</strong>
           </nav>
-          <h1 id="purchase-title">Registrar Ingreso de Rollos / Lote de Tela</h1>
+          <h1 id="purchase-title">Registrar Ingreso de Lote de Tela (Kilos / Libras)</h1>
         </header>
 
         <form class="purchase-form" id="purchase-form">
@@ -37,16 +37,18 @@
           </section>
 
           <section class="form-section">
-            <h2>Metraje y Embalaje</h2>
+            <h2>Peso y Conversion (Kilos / Libras)</h2>
             <div class="field quantity-field">
               <label for="quantity">Cantidad recibida</label>
               <div class="quantity-control">
                 <input id="quantity" name="quantity" type="number" min="0.01" step="0.01" placeholder="100.00" required />
-                <select id="unit" name="unit">
-                  <option value="Metro">Metros</option>
-                  <option value="Rollo">Rollos</option>
-                  <option value="Yarda">Yardas</option>
-                </select>
+                <select id="unit" name="unit"><option value="Kilogramo (kg)">Kilogramos (kg)</option><option value="Libra (lb)">Libras (lb)</option></select><!--
+                  <option value="Kilogramo (kg)">Kilogramos (kg)</option>
+                  <option value="Libra (lb)">Libras (lb)</option>
+                  <option value="Libra (lb)">Libras (lb)</option>
+
+
+--></div><small id="weight-conversion-preview" style="display:block;margin-top:6px;color:#1e40af;font-weight:600">Conversion automatica: 1.00 kg = 2.20 lb | 1.00 lb = 0.45 kg</small><div>
               </div>
             </div>
             <div class="field">

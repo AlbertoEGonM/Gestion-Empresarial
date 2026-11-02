@@ -1,0 +1,599 @@
+/* ==========================================================================
+   Estilos Profesionales Armonizados con styles.css (COI 9.0 / NOI 11.00.20 / SAE)
+   Paleta nativa: --primary (#4a6fa5), --primary-soft (#f0f3f8), --text (#18181b)
+   ========================================================================== */
+
+@keyframes erpViewEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes erpCardPulse {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Barra de pestañas / flujo contable y de nómina integrada al estilo .module-tabs */
+.coi-flow-bar {
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  margin-top: 22px;
+  margin-bottom: 0;
+  overflow-x: auto;
+  padding: 0;
+  background: transparent;
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  box-shadow: none;
+  scrollbar-width: thin;
+}
+
+.coi-flow-label {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin-right: 8px;
+  padding: 10px 4px 9px 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.coi-flow-step {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 6px 6px 0 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font: 500 12px/18px Inter, Arial, sans-serif;
+  gap: 6px;
+  padding: 10px 14px 9px;
+  position: relative;
+  text-decoration: none;
+  transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+  white-space: nowrap;
+}
+
+.coi-flow-step:hover {
+  background: rgba(74, 111, 165, 0.06);
+  color: var(--primary);
+}
+
+.coi-flow-step.active {
+  background: rgba(74, 111, 165, 0.08);
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.coi-flow-arrow {
+  color: rgba(107, 114, 128, 0.45);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 0 2px;
+  user-select: none;
+}
+
+/* Paneles principales siguiendo el formato .employee-panel / .catalog-panel / .module-table */
+.erp-panel {
+  animation: erpViewEnter 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.03);
+  margin-top: 20px;
+  padding: 20px;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.erp-panel form.erp-panel,
+form.erp-panel {
+  background: #f9fafb !important;
+  border: 1px solid var(--primary-border);
+  border-radius: 8px;
+  box-shadow: none;
+  margin-top: 0;
+  margin-bottom: 18px;
+  padding: 18px;
+}
+
+/* Barra de herramientas idéntica a .module-toolbar / .employee-toolbar */
+.erp-toolbar {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.erp-filters {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1 1 auto;
+}
+
+.erp-filters label,
+.erp-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  min-width: 155px;
+}
+
+.erp-filters label > span,
+.erp-form-grid label > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 15px;
+  text-transform: uppercase;
+}
+
+.erp-filters input,
+.erp-filters select,
+.erp-form-grid input,
+.erp-form-grid select,
+.erp-form-grid textarea {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: 400 13px/19.5px Inter, Arial, sans-serif;
+  height: 38px;
+  min-width: 155px;
+  outline: none;
+  padding: 8px 12px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.erp-filters input:focus,
+.erp-filters select:focus,
+.erp-form-grid input:focus,
+.erp-form-grid select:focus,
+.erp-form-grid textarea:focus {
+  border-color: rgba(74, 111, 165, 0.55);
+  box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.12);
+}
+
+.erp-form-grid textarea {
+  height: auto;
+  min-height: 72px;
+}
+
+.erp-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.erp-actions .primary-action {
+  margin-left: 0;
+}
+
+/* Botones de exportación alineados con .secondary-action de styles.css */
+.btn-excel,
+.btn-pdf {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  font: 500 13px/19.5px Inter, Arial, sans-serif;
+  gap: 6px;
+  height: 38px;
+  padding: 8px 14px;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
+}
+
+.btn-excel::before {
+  background: rgba(45, 106, 79, 0.12);
+  border-radius: 4px;
+  color: #2d6a4f;
+  content: "XLS";
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 5px;
+}
+
+.btn-pdf::before {
+  background: rgba(74, 111, 165, 0.12);
+  border-radius: 4px;
+  color: var(--primary);
+  content: "PDF";
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 5px;
+}
+
+.btn-excel:hover,
+.btn-pdf:hover {
+  background: var(--primary-soft);
+  border-color: rgba(74, 111, 165, 0.45);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+/* Tablas estilo .module-table con divisiones sutiles de cuadrícula COI/NOI */
+.coi-boxed-table-wrap {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.coi-boxed-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  line-height: 18px;
+  width: 100%;
+}
+
+.coi-boxed-table th {
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  min-height: 48px;
+  padding: 13px 16px;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.coi-boxed-table th:last-child,
+.coi-boxed-table td:last-child {
+  border-right: none;
+}
+
+.coi-boxed-table td {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-right: 1px solid rgba(0, 0, 0, 0.04);
+  color: var(--text);
+  min-height: 52px;
+  padding: 12px 16px;
+  transition: background-color 0.15s ease;
+  vertical-align: middle;
+}
+
+.coi-boxed-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.coi-boxed-table tbody tr:hover td {
+  background: rgba(74, 111, 165, 0.035);
+}
+
+.coi-boxed-table tfoot td {
+  background: var(--primary-soft);
+  border-top: 1px solid var(--primary-border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 12px 16px;
+}
+
+.num-col {
+  font-variant-numeric: tabular-nums;
+  text-align: right !important;
+}
+
+/* Badges e indicadores alineados con .status y code de styles.css */
+.code-badge {
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-border);
+  border-radius: 5px;
+  color: var(--primary);
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+}
+
+.policy-badge {
+  align-items: center;
+  border-radius: 4px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16.5px;
+  padding: 2px 7px;
+}
+
+.policy-badge.type-CO { background: rgba(146, 64, 14, 0.08); color: #92400e; }
+.policy-badge.type-DI { background: rgba(74, 111, 165, 0.12); color: var(--primary); }
+.policy-badge.type-EG { background: rgba(163, 58, 50, 0.1); color: #a33a32; }
+.policy-badge.type-IG { background: rgba(45, 106, 79, 0.1); color: #2d6a4f; }
+.policy-badge.type-VT { background: rgba(30, 77, 140, 0.1); color: #1e4d8c; }
+
+.erp-form-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+  margin-bottom: 16px;
+}
+
+.policy-lines-table {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-collapse: collapse;
+  border-radius: 8px;
+  font-size: 12px;
+  margin: 12px 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.policy-lines-table th,
+.policy-lines-table td {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 8px 10px;
+}
+
+.policy-lines-table th {
+  background: rgba(0, 0, 0, 0.02);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.policy-lines-table input {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12.5px;
+  height: 34px;
+  padding: 6px 10px;
+  width: 100%;
+}
+
+.balance-Diff-ok {
+  color: #2d6a4f;
+  font-weight: 600;
+}
+
+.balance-Diff-err {
+  color: #a33a32;
+  font-weight: 600;
+}
+
+/* Tarjetas de auxiliares y KPIs siguiendo el estilo .module-metrics */
+.aux-account-card {
+  animation: erpCardPulse 0.22s ease both;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.aux-account-card:hover {
+  border-color: rgba(74, 111, 165, 0.35);
+  box-shadow: 0 6px 18px rgba(24, 24, 27, 0.05);
+}
+
+.aux-account-header {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 12px 16px;
+}
+
+.kpi-strip {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 18px;
+}
+
+.kpi-box {
+  animation: erpCardPulse 0.25s ease both;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  min-height: 92px;
+  padding: 14px 18px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.kpi-box:hover {
+  border-color: rgba(74, 111, 165, 0.35);
+  box-shadow: 0 8px 20px rgba(24, 24, 27, 0.05);
+  transform: translateY(-2px);
+}
+
+.kpi-box span {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16.5px;
+  text-transform: uppercase;
+}
+
+.kpi-box strong {
+  color: var(--text);
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+  margin-top: 4px;
+}
+
+.switch-pill {
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-border);
+  border-radius: 8px;
+  display: inline-flex;
+  overflow: hidden;
+  padding: 2px;
+}
+
+.switch-pill button {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  font: 500 12px/18px Inter, Arial, sans-serif;
+  padding: 6px 12px;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.switch-pill button.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.email-badge-yes {
+  background: rgba(45, 106, 79, 0.08);
+  border-radius: 4px;
+  color: #2d6a4f;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16.5px;
+  padding: 2px 7px;
+}
+
+.email-badge-no {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16.5px;
+  padding: 2px 7px;
+}
+
+.closed-banner {
+  align-items: center;
+  background: #fff5f5;
+  border: 1px solid rgba(192, 57, 43, 0.22);
+  border-radius: 8px;
+  color: #a33a32;
+  display: flex;
+  font-size: 13px;
+  font-weight: 500;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+}
+
+.worker-subdata {
+  color: var(--muted);
+  display: block;
+  font-size: 11px;
+  line-height: 16px;
+  margin-top: 2px;
+}
+
+
+/* Botones de acción en filas (.mini-btn) e indicadores (.yes-no-pill) */
+.mini-btn {
+  align-items: center;
+  background: #fff;
+  border: 1px solid rgba(74, 111, 165, 0.28);
+  border-radius: 6px;
+  color: var(--primary);
+  cursor: pointer;
+  display: inline-flex;
+  font: 500 11px/16px Inter, Arial, sans-serif;
+  gap: 4px;
+  height: 28px;
+  margin-right: 4px;
+  padding: 4px 9px;
+  text-decoration: none;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.14s ease;
+  white-space: nowrap;
+}
+
+.mini-btn:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.mini-btn.danger {
+  border-color: rgba(163, 58, 50, 0.28);
+  color: #a33a32;
+}
+
+.mini-btn.danger:hover {
+  background: #fff5f5;
+  border-color: #a33a32;
+}
+
+.yes-no-pill {
+  align-items: center;
+  border-radius: 4px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 500;
+  gap: 4px;
+  line-height: 16.5px;
+  padding: 2px 8px;
+}
+
+.yes-no-pill.yes {
+  background: rgba(45, 106, 79, 0.08);
+  color: #2d6a4f;
+}
+
+.yes-no-pill.no {
+  background: rgba(146, 64, 14, 0.08);
+  color: #92400e;
+}
+
+.coi-section-subtitle {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 21px;
+  margin: 4px 0 12px;
+}

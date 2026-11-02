@@ -266,6 +266,7 @@ async function getAccountingReport(type, period, companyId) {
 }
 
 window.gestionUserDb = {
+  apiRequest: requestJson,
   approveRegistration,
   createEmployee,
   createUser,

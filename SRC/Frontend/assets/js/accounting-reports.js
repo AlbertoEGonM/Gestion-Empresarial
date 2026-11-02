@@ -173,6 +173,21 @@ async function initialize() {
 reportType.addEventListener("change", loadReport);
 reportPeriod.addEventListener("change", loadReport);
 reportCompany.addEventListener("change", loadReport);
+function downloadExcel() {
+  if (!currentReport || !window.gestionExport) return;
+  const table = paper.querySelector("table");
+  const { columns, rows } = window.gestionExport.tableData(table, { skipColumns: [] });
+  window.gestionExport.toExcel({
+    filename: `${currentReport.type}-${currentReport.period}`,
+    sheetName: "Reporte",
+    title: reportType.selectedOptions[0]?.textContent || "Reporte Contable",
+    subtitle: `Periodo: ${currentReport.period}`,
+    columns,
+    rows,
+  });
+}
+
+document.querySelector("#report-excel")?.addEventListener("click", downloadExcel);
 document.querySelector("#report-print").addEventListener("click", () => window.print());
 document.querySelector("#report-csv").addEventListener("click", downloadCsv);
 initialize().catch((error) => { reportStatus.textContent = error.message; });

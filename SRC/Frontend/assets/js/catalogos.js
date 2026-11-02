@@ -13,9 +13,9 @@ const catalogData = {
     search: "Buscar unidad de medida...",
     button: "+ Nueva Unidad",
     formTitle: "Nueva Unidad",
-    formHelp: "Define como se cuantifica y comercializa la tela en almacenes y facturacion.",
-    namePlaceholder: "Ej. Fardo",
-    descriptionPlaceholder: "Ej. Empaque mayorista de rollos prensados para importacion.",
+    formHelp: "Define las unidades basadas en la conversion de Kilos (kg) y Libras (lb) (1 kg = 2.20 lb | 1 lb = 0.45 kg).",
+    namePlaceholder: "Ej. Kilogramo (kg) o Libra (lb)",
+    descriptionPlaceholder: "Ej. 1 Kilogramo (kg) equivale a 2.20462 Libras (lb).",
     countLabel: "registros",
     rows: [],
   },
@@ -293,4 +293,14 @@ catalogForm.addEventListener("submit", async (event) => {
   }
 });
 
+document.querySelector("#catalog-export-excel")?.addEventListener("click", () => {
+  const columns = ["Nombre", "Descripcion tecnica", "No. de serie", "Estatus"];
+  const rows = (catalogData[activeCatalog]?.rows || []).map((r) => [r.name, r.description, r.serial || "-", r.status]);
+  window.gestionExport?.toExcel({ filename: `catalogo-${activeCatalog}`, sheetName: activeCatalog, title: `Catalogo Maestro: ${activeCatalog}`, columns, rows });
+});
+document.querySelector("#catalog-export-pdf")?.addEventListener("click", () => {
+  const columns = ["Nombre", "Descripcion tecnica", "No. de serie", "Estatus"];
+  const rows = (catalogData[activeCatalog]?.rows || []).map((r) => [r.name, r.description, r.serial || "-", r.status]);
+  window.gestionExport?.toPdf({ filename: `catalogo-${activeCatalog}`, title: `Catalogo Maestro: ${activeCatalog}`, columns, rows });
+});
 setCatalog(activeCatalog);

@@ -23,12 +23,18 @@ const ALLOWED_EMPLOYEE_FIELDS = [
   "branch",
   "systemRole",
   "permissions",
+  "baseSalary",
+  "paymentFrequency",
+  "bankAccount",
+  "payrollEmailEnabled",
 ];
 
 const EMPLOYEE_COLUMNS = `
   e.id, e.company_id, e.first_name, e.last_name, e.second_last_name, e.email,
   e.birth_date, e.birth_place, e.gender, e.identity_number, e.tax_number,
   e.social_security_number, e.position, e.branch, e.system_role, e.permissions_json,
+  e.social_security_number, e.position, e.branch, e.system_role, e.permissions_json,
+  e.base_salary, e.payment_frequency, e.bank_account, e.payroll_email_enabled,
   e.status, e.created_at, e.updated_at, c.name company_name
 `;
 
@@ -64,6 +70,11 @@ function publicEmployee(row) {
     branch: row.branch,
     systemRole: row.system_role,
     permissions: normalizePermissions(row.permissions_json, row.system_role),
+    permissions: normalizePermissions(row.permissions_json, row.system_role),
+    baseSalary: Number(row.base_salary || 0),
+    paymentFrequency: row.payment_frequency || "Quincenal",
+    bankAccount: row.bank_account || "",
+    payrollEmailEnabled: row.payroll_email_enabled === undefined || row.payroll_email_enabled === null ? true : Boolean(Number(row.payroll_email_enabled)),
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -141,6 +152,10 @@ function validateEmployee(body, countryCode) {
     branch,
     systemRole,
     permissions: normalizePermissions(body.permissions, systemRole),
+    baseSalary: Math.max(Number(body.baseSalary || 0) || 0, 0),
+    paymentFrequency: ["Semanal", "Quincenal", "Mensual"].includes(body.paymentFrequency) ? body.paymentFrequency : "Quincenal",
+    bankAccount: cleanText(body.bankAccount || "").slice(0, 80),
+    payrollEmailEnabled: body.payrollEmailEnabled === false || body.payrollEmailEnabled === "NO" || body.payrollEmailEnabled === 0 || body.payrollEmailEnabled === "0" ? 0 : 1,
   };
 }
 
@@ -178,6 +193,10 @@ async function ensureEmployeesTable() {
       )`);
       await pool.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS identity_blind_index VARCHAR(100) NULL").catch(() => {});
       await pool.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS permissions_json TEXT NULL").catch(() => {});
+      await pool.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS base_salary DECIMAL(18,2) NOT NULL DEFAULT 0").catch(() => {});
+      await pool.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS payment_frequency VARCHAR(20) NOT NULL DEFAULT 'Quincenal'").catch(() => {});
+      await pool.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS bank_account VARCHAR(80) NOT NULL DEFAULT ''").catch(() => {});
+      await pool.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS payroll_email_enabled SMALLINT NOT NULL DEFAULT 1").catch(() => {});
       await pool.query("ALTER TABLE employees ALTER COLUMN identity_number TYPE VARCHAR(255)").catch(() => {});
       await pool.query("ALTER TABLE employees ALTER COLUMN tax_number TYPE VARCHAR(255)").catch(() => {});
       await pool.query("ALTER TABLE employees ALTER COLUMN social_security_number TYPE VARCHAR(255)").catch(() => {});
@@ -310,8 +329,8 @@ async function createEmployee(user, body, ipAddress = "local") {
     const [result] = await pool.query(
       `INSERT INTO employees
        (company_id, first_name, last_name, second_last_name, email, birth_date, birth_place, gender, identity_number,
-        tax_number, social_security_number, identity_blind_index, position, branch, system_role, permissions_json, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        tax_number, social_security_number, identity_blind_index, position, branch, system_role, permissions_json, base_salary, payment_frequency, bank_account, payroll_email_enabled, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         companyId,
         valid.firstName,
@@ -329,6 +348,10 @@ async function createEmployee(user, body, ipAddress = "local") {
         valid.branch,
         valid.systemRole,
         JSON.stringify(valid.permissions),
+        valid.baseSalary,
+        valid.paymentFrequency,
+        valid.bankAccount,
+        valid.payrollEmailEnabled,
         user.id,
       ]
     );
@@ -362,7 +385,7 @@ async function updateEmployee(user, id, body, ipAddress = "local") {
     await pool.query(
       `UPDATE employees SET first_name = ?, last_name = ?, second_last_name = ?, email = ?, birth_date = ?, birth_place = ?,
        gender = ?, identity_number = ?, tax_number = ?, social_security_number = ?, identity_blind_index = ?,
-       position = ?, branch = ?, system_role = ?, permissions_json = ?, updated_at = CURRENT_TIMESTAMP
+       position = ?, branch = ?, system_role = ?, permissions_json = ?, base_salary = ?, payment_frequency = ?, bank_account = ?, payroll_email_enabled = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND company_id = ? AND status <> 'Eliminado'`,
       [
         valid.firstName,
@@ -380,6 +403,10 @@ async function updateEmployee(user, id, body, ipAddress = "local") {
         valid.branch,
         valid.systemRole,
         JSON.stringify(valid.permissions),
+        valid.baseSalary,
+        valid.paymentFrequency,
+        valid.bankAccount,
+        valid.payrollEmailEnabled,
         Number(id),
         current.companyId,
       ]

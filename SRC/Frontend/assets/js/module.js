@@ -112,6 +112,42 @@ let editIndex = null;
 let posCart = [];
 let posTaxName = activeUser().countryCode === "MX" ? "IVA" : "ISV";
 let posTaxRate = Number(activeUser().taxRate ?? (activeUser().countryCode === "MX" ? 16 : 15));
+let posPriceListIndex = 0;
+const PRICE_LIST_NAMES = ["1. Precio Publico", "2. Precio Mayoreo", "3. Precio Distribuidor", "4. Precio Especial 1", "5. Precio Especial 2"];
+
+function formatWeightConversion(qtyValue, unitValue) {
+  const qty = numericValue(qtyValue);
+  const u = String(unitValue || "").toLowerCase();
+  if (!qty) return "";
+  if (u.includes("libra") || u === "lb") return ` lb (${(qty * 0.453592).toFixed(2)} kg)`;
+  return ` kg (${(qty * 2.20462).toFixed(2)} lb)`;
+}
+
+function formatPriceConversion(priceValue, unitValue) {
+  const price = numericValue(priceValue);
+  if (!price) return "";
+  const isLb = String(unitValue || "").toLowerCase().includes("libra") || String(unitValue || "").toLowerCase() === "lb";
+  const otherPrice = isLb ? price * 2.20462 : price / 2.20462;
+  const otherUnit = isLb ? "kg" : "lb";
+  return ` (${currency(otherPrice, 2)}/${otherUnit})`;
+}
+
+function formatInlineWeightText(value) {
+  const str = String(value ?? "");
+  if (!str || /\(\d+(?:[.,]\d+)?\s*(?:kg|lb)\)/i.test(str)) return str;
+  const kgMatch = str.match(/^(\s*[+-]?\d+(?:[.,]\d+)?)\s*(?:kg|kilos?|kilogramos?)\b(.*)$/i);
+  if (kgMatch) {
+    const n = numericValue(kgMatch[1]);
+    return `${n.toFixed(2)} kg (${(n * 2.20462).toFixed(2)} lb)${kgMatch[2] || ""}`;
+  }
+  const lbMatch = str.match(/^(\s*[+-]?\d+(?:[.,]\d+)?)\s*(?:lb|lbs|libras?)\b(.*)$/i);
+  if (lbMatch) {
+    const n = numericValue(lbMatch[1]);
+    return `${n.toFixed(2)} lb (${(n * 0.453592).toFixed(2)} kg)${lbMatch[2] || ""}`;
+  }
+  return str;
+  return "";
+}
 
 function rowsStorageKey(moduleKey, viewKey) {
   return `${STORAGE_PREFIX}-c${activeCompanyId()}-${moduleKey}-${viewKey}-rows`;
@@ -124,7 +160,11 @@ function normalizeDatasetRows(moduleKey, viewKey, datasetRows) {
       if (row.length === 13) {
         return [row[0], row[1], row[3], row[5], row[6], row[7], row[11], row[12]];
       }
-      return row;
+      const normRow = row.length === 13 ? [row[0], row[1], row[3], row[5], row[6], row[7], row[11], row[12]] : [...row];
+      if (normRow.length >= 4) {
+        normRow[3] = String(normRow[3] || "").toLowerCase().includes("libra") || String(normRow[3] || "").toLowerCase() === "lb" ? "Libra (lb)" : "Kilogramo (kg)";
+      }
+      return normRow;
     });
   }
   return datasetRows;
@@ -288,12 +328,18 @@ function operationalMetrics(metricType) {
     const warehouses = moduleRows("inventarios", "almacenes").filter((row) => /activo/i.test(row[6]));
     const active = products.filter((row) => /activo/i.test(row[6]));
     const lowStock = products.filter((row) => /bajo minimo|existencia negativa/i.test(row[6]));
-    const stock = totalAt(products.filter((row) => !/inactivo/i.test(row[6])), 4);
+    const activeProducts = products.filter((row) => !/inactivo/i.test(row[6]));
+    const totalKg = activeProducts.reduce((sum, row) => {
+      const q = numericValue(row[4]);
+      const isLb = String(row[3] || "").toLowerCase().includes("libra");
+      return sum + (isLb ? q * 0.453592 : q);
+    }, 0);
+    const totalLb = totalKg * 2.20462;
     const negativeStock = products.filter((row) => numericValue(row[4]) < 0);
     const categories = new Set(active.map((row) => row[2]).filter(Boolean)).size;
     return [
       ["Productos activos", String(active.length), `${categories} categorias textiles`],
-      ["Existencia total", `${stock.toLocaleString(u.locale || "es-HN")} unid.`, `En ${warehouses.length} almacenes activos`],
+      ["Existencia total", `${totalKg.toLocaleString(u.locale || "es-HN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg`, `Equivale a ${totalLb.toLocaleString(u.locale || "es-HN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} lb (${warehouses.length} almacenes)`],
       ["Bajo minimo", String(lowStock.length), "Requieren abastecimiento"],
       ["Existencia negativa", String(negativeStock.length), negativeStock.length ? "Requiere regularizacion" : "Inventario regularizado"],
     ];
@@ -516,7 +562,11 @@ function renderTable() {
       const serialIndex = alignedRow.length - 1;
       const cells = alignedRow
         .map((cell, cellIndex) => {
-          const renderedText = escapeHtml(localizeBusinessText(cell));
+          const isInvProd = currentKey === "inventarios" && currentViewKey === "productos";
+          const weightNote = isInvProd && cellIndex === 4 ? escapeHtml(formatWeightConversion(cell, alignedRow[3])) : isInvProd && cellIndex === 5 ? escapeHtml(formatPriceConversion(cell, alignedRow[3])) : "";
+          const baseText = isInvProd ? localizeBusinessText(cell) : formatInlineWeightText(localizeBusinessText(cell));
+          const renderedText = escapeHtml(baseText) + weightNote;
+          // baseText + weightNote already in renderedText
           if (cellIndex === statusIndex) {
             return `<span><b class="status ${statusClass(cell)}">${renderedText}</b></span>`;
           }
@@ -555,12 +605,12 @@ function renderFilterOptions() {
     if (!categorySelect) {
       filterControl.insertAdjacentHTML(
         "afterend",
-        `<label class="module-filter"><span>Categoria</span><select id="inventory-category-filter"><option value="">Todas</option></select></label><label class="module-filter"><span>Existencia</span><select id="inventory-stock-filter"><option value="">Todas</option><option value="positive">Positiva</option><option value="zero">En cero</option><option value="negative">Negativa</option></select></label><a class="secondary-action" href="./registrar-ingreso.html">+ Costear lote</a><button class="secondary-action inventory-export" id="inventory-export" type="button">Exportar a Excel</button>`
+        `<label class="module-filter"><span>Categoria</span><select id="inventory-category-filter"><option value="">Todas</option></select></label><label class="module-filter"><span>Existencia</span><select id="inventory-stock-filter"><option value="">Todas</option><option value="positive">Positiva</option><option value="zero">En cero</option><option value="negative">Negativa</option></select></label><a class="secondary-action" href="./registrar-ingreso.html">+ Costear lote</a>`
       );
       categorySelect = document.querySelector("#inventory-category-filter");
       categorySelect.addEventListener("change", renderTable);
       document.querySelector("#inventory-stock-filter").addEventListener("change", renderTable);
-      document.querySelector("#inventory-export").addEventListener("click", exportInventory);
+      document.querySelector("#inventory-export")?.addEventListener("click", exportInventory);
     }
     const previousCat = categorySelect.value;
     categorySelect.innerHTML =
@@ -606,7 +656,7 @@ function renderReports() {
       ([title, description], index) =>
         `<article class="report-card"><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p><div><small>CSV consolidado (${escapeHtml(
           activeUser().company || "Empresa activa"
-        )})</small><button type="button" data-report="${index}">Descargar CSV</button></div></article>`
+        )})</small><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-report-excel="${index}">Excel (.xlsx)</button><button type="button" data-report-pdf="${index}">PDF</button><button type="button" data-report="${index}">CSV</button></div></div></article>`
     )
     .join("")}</div>`;
 }
@@ -644,14 +694,22 @@ function renderGuides() {
 function getPosProducts() {
   const inventoryRows = moduleRows("inventarios", "productos");
   if (!inventoryRows.length) return [];
+  const priceRows = moduleRows("inventarios", "precios");
   return inventoryRows
     .filter((row) => !/inactivo/i.test(String(row[6] || "")))
     .map((row) => ({
       id: String(row[0] || "TELA-0001"),
       name: String(row[1] || "Tela comercial"),
-      stock: `${row[4] || "0"} ${String(row[3] || "m").toLowerCase()}`,
-      price: Math.max(0.01, numericValue(row[5]) || 1),
-      unit: String(row[3] || "Metro").toLowerCase().startsWith("rollo") ? "rollo" : "m",
+      stock: `${numericValue(row[4]).toFixed(2)}${formatWeightConversion(row[4], row[3])}`,
+      price: (() => {
+        const base = Math.max(0.01, numericValue(row[5]) || 1);
+        const match = priceRows.find((p) => String(p[0]).trim() === String(row[0]).trim() || String(p[1]).trim() === String(row[1]).trim());
+        const tiers = match
+          ? [numericValue(match[2]) || base, numericValue(match[3]) || base * 0.92, numericValue(match[4]) || base * 0.85, numericValue(match[5]) || base * 0.8, numericValue(match[6]) || base * 0.75]
+          : [base, base * 0.92, base * 0.85, base * 0.8, base * 0.75];
+        return Math.round((tiers[posPriceListIndex] || base) * 100) / 100;
+      })(),
+      unit: String(row[3] || "Kilogramo (kg)").toLowerCase().includes("libra") || String(row[3] || "").toLowerCase() === "lb" ? "lb" : "kg",
     }));
 }
 
@@ -690,7 +748,7 @@ function renderPos() {
   const tax = subtotal * (taxRate / 100);
   const total = subtotal + tax;
   view.innerHTML = `<div class="pos-layout"><section class="pos-products">
-    <div class="pos-section-heading"><div><h2>Catalogo de telas en mostrador</h2><p>Selecciona rollos o metros registrados en inventario para agregar a la venta.</p></div><label class="search-control pos-search"><img src="./assets/icons/inventory-search.svg" alt="" /><input id="pos-search" type="search" placeholder="Buscar tela o codigo..." /></label></div>
+    <div class="pos-section-heading"><div><h2>Catalogo de telas en mostrador (Kilos / Libras)</h2><p>Selecciona productos en Kilos (kg) o Libras (lb) con conversion automatica para agregar a la venta.</p></div><label class="search-control pos-search"><img src="./assets/icons/inventory-search.svg" alt="" /><input id="pos-search" type="search" placeholder="Buscar tela o codigo..." /></label></div>
     <div class="pos-product-grid" id="pos-product-grid">${renderPosProducts(availableProducts)}</div></section>
     <aside class="pos-cart"><div class="pos-cart-heading"><div><h2>Venta de mostrador</h2><p>${escapeHtml(
       activeUser().company || "Sucursal Principal"
@@ -698,6 +756,8 @@ function renderPos() {
     <label class="pos-field"><span>Cliente</span><select id="pos-client-select">${clientNames
       .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
       .join("")}</select></label>
+    <label class="pos-field"><span>Lista de precio (5 listas)</span><select id="pos-price-list-select">${PRICE_LIST_NAMES.map((lbl, idx) => `<option value="${idx}"${idx === posPriceListIndex ? " selected" : ""}>${escapeHtml(lbl)}</option>`).join("")}</select></label>
+    <label class="pos-field"><span>Esquema de impuestos</span><select id="pos-tax-scheme-select"><option value="ISV:15">ISV General (15%)</option><option value="ISV:18">ISV Especial (18%)</option><option value="IVA:16">IVA General (16%)</option><option value="Exento:0">Exento (0%)</option>${moduleRows("inventarios", "impuestos").map((t) => `<option value="${escapeHtml(t[1] || "Impuesto")}:${numericValue(t[2]) + numericValue(t[3])}">${escapeHtml(t[0])} - ${escapeHtml(t[1])} (${numericValue(t[2]) + numericValue(t[3])}%)</option>`).join("")}</select></label>
     <div class="pos-cart-items">${
       posCart.length
         ? posCart
@@ -705,7 +765,7 @@ function renderPos() {
               (item) =>
                 `<div class="pos-cart-row"><div><strong>${escapeHtml(item.name)}</strong><small>${money(item.price)} / ${escapeHtml(
                   item.unit
-                )}</small></div><div class="pos-quantity"><button type="button" data-pos="decrease" data-id="${escapeHtml(
+                )}</small><small style="display:block;color:#1e40af">${item.unit === "lb" ? `${(item.quantity * 0.453592).toFixed(2)} kg` : `${(item.quantity * 2.20462).toFixed(2)} lb`}</small></div><div class="pos-quantity"><button type="button" data-pos="toggle-unit" data-id="${escapeHtml(item.id)}" title="Convertir entre Kilos (kg) y Libras (lb)" style="font-size:0.74rem;padding:2px 6px;width:auto">${escapeHtml(item.unit.toUpperCase())} ⇄</button><button type="button" data-pos="decrease" data-id="${escapeHtml(
                   item.id
                 )}" aria-label="Reducir cantidad">-</button><span>${item.quantity}</span><button type="button" data-pos="increase" data-id="${escapeHtml(
                   item.id
@@ -714,7 +774,7 @@ function renderPos() {
             .join("")
         : '<div class="pos-empty"><strong>Sin telas en la orden</strong><span>Selecciona telas del catalogo izquierdo para iniciar el corte o venta.</span></div>'
     }</div>
-    <div class="pos-summary"><div><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
+    <div class="pos-summary"><div><span>Peso total</span><strong>${posCart.reduce((s, it) => s + (it.unit === "lb" ? it.quantity * 0.453592 : it.quantity), 0).toFixed(2)} kg (${posCart.reduce((s, it) => s + (it.unit === "lb" ? it.quantity : it.quantity * 2.20462), 0).toFixed(2)} lb)</strong></div><div><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
     <div class="pos-tax-editor"><label><span>Impuesto</span><input id="pos-tax-name" type="text" value="${escapeHtml(
       posTaxName
     )}" maxlength="30" placeholder="Impuesto" aria-label="Nombre del impuesto" /></label><label><span>Porcentaje</span><span class="pos-tax-rate"><input id="pos-tax-rate" type="number" value="${taxRate}" min="0" max="100" step="0.01" aria-label="Porcentaje del impuesto" /><b>%</b></span></label></div>
@@ -746,6 +806,21 @@ function renderPos() {
   };
   taxNameInput.addEventListener("input", updateTax);
   taxRateInput.addEventListener("input", updateTax);
+  document.querySelector("#pos-price-list-select")?.addEventListener("change", (e) => {
+    posPriceListIndex = Number(e.target.value || 0);
+    const updatedProducts = getPosProducts();
+    posCart = posCart.map((c) => {
+      const found = updatedProducts.find((p) => p.id === c.id);
+      return found ? { ...c, price: found.price } : c;
+    });
+    renderPos();
+  });
+  document.querySelector("#pos-tax-scheme-select")?.addEventListener("change", (e) => {
+    const [schemeName, schemeRate] = String(e.target.value || "ISV:15").split(":");
+    taxNameInput.value = schemeName || "ISV";
+    taxRateInput.value = String(Number(schemeRate || 0));
+    updateTax();
+  });
 }
 
 async function handlePosAction(button) {
@@ -756,7 +831,18 @@ async function handlePosAction(button) {
   if (action === "add" && product) {
     cartItem ? (cartItem.quantity += 1) : posCart.push({ ...product, quantity: 1 });
   }
-  if (action === "increase" && cartItem) cartItem.quantity += 1;
+  if (action === "toggle-unit" && cartItem) {
+    if (cartItem.unit === "kg") {
+      cartItem.unit = "lb";
+      cartItem.quantity = Math.round(cartItem.quantity * 2.20462 * 100) / 100;
+      cartItem.price = Math.round((cartItem.price / 2.20462) * 100) / 100;
+    } else {
+      cartItem.unit = "kg";
+      cartItem.quantity = Math.round(cartItem.quantity * 0.453592 * 100) / 100;
+      cartItem.price = Math.round((cartItem.price * 2.20462) * 100) / 100;
+    }
+  }
+  if (action === "increase" && cartItem) cartItem.quantity = Math.round((cartItem.quantity + 1) * 100) / 100;
   if (action === "decrease" && cartItem) {
     cartItem.quantity -= 1;
     if (cartItem.quantity <= 0) posCart = posCart.filter((item) => item.id !== cartItem.id);
@@ -842,6 +928,36 @@ function buildForm(row = []) {
     formFields.insertAdjacentHTML(
       "beforeend",
       `<datalist id="sales-client-list">${clientNames.map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>`
+    );
+  }
+  if (currentKey === "inventarios" && currentViewKey === "productos") {
+    formFields.insertAdjacentHTML("beforeend", '<div id="modal-weight-preview" style="grid-column:1/-1;padding:8px 12px;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:0.84rem;font-weight:600">Conversion base: 1.00 kg = 2.20 lb | 1.00 lb = 0.45 kg</div>');
+    const unitSel = formFields.querySelector('select[name="field-3"]');
+    const qtyInp = formFields.querySelector('input[name="field-4"]');
+    const priceInp = formFields.querySelector('input[name="field-5"]');
+    const previewEl = formFields.querySelector("#modal-weight-preview");
+    const refreshModalConversion = () => {
+      const q = numericValue(qtyInp?.value);
+      const p = numericValue(priceInp?.value);
+      const isLb = String(unitSel?.value || "").toLowerCase().includes("libra");
+      const kg = isLb ? q * 0.453592 : q;
+      const lb = isLb ? q : q * 2.20462;
+      const pKg = isLb ? p * 2.20462 : p;
+      const pLb = isLb ? p : p / 2.20462;
+      if (previewEl) {
+        previewEl.textContent = q > 0 || p > 0
+          ? `Conversion automatica: ${kg.toFixed(2)} kg = ${lb.toFixed(2)} lb  |  Precio: ${currency(pKg, 2)}/kg (${currency(pLb, 2)}/lb)`
+          : "Conversion base: 1.00 kg = 2.20 lb | 1.00 lb = 0.45 kg";
+      }
+    };
+    [unitSel, qtyInp, priceInp].forEach((el) => {
+      el?.addEventListener("input", refreshModalConversion);
+      el?.addEventListener("change", refreshModalConversion);
+    });
+    refreshModalConversion();
+  }
+  if (false) {
+    void (0
     );
   }
 }
@@ -978,8 +1094,8 @@ async function runWorkflow(index) {
       row[0],
       row[1],
       "LOT-PENDIENTE",
-      "0 m",
-      "0 m",
+      "0.00 kg (0.00 lb)",
+      "0.00 kg (0.00 lb)",
       "Pendiente",
     ]);
     navigate("compras", "recepciones");
@@ -990,7 +1106,7 @@ async function runWorkflow(index) {
     const { documentNumber } = await nextTargetDocument("ventas", "pedidos");
     const detail = String(row[2] || "");
     const quantity = detail.match(/[+-]?\d+(?:[.,]\d+)?/)?.[0] || "1";
-    const product = detail.replace(/^[+-]?\d+(?:[.,]\d+)?\s*(?:m|metros?|rollos?|piezas?)?\s*/i, "") || detail;
+    const product = detail.replace(/^[+-]?\d+(?:[.,]\d+)?\s*(?:kg|kilos?|kilogramos?|lb|lbs|libras?)?\s*/i, "") || detail;
     await appendTargetRow("ventas", "pedidos", [documentNumber, row[1], product, quantity, "Detalle", row[3], row[4], "Pendiente"]);
     navigate("ventas", "pedidos");
   } else if (type === "order-to-invoice") {
@@ -1010,7 +1126,52 @@ async function runWorkflow(index) {
   }
 }
 
+function exportCurrentView(format = "excel") {
+  const dataRows = filteredRows().map(({ row }) => row.map((c) => localizeBusinessText(c)));
+  const headers = [...(currentView.columns || [])];
+  if (headers.at(-1) === "Acciones") {
+    headers.splice(-1, 0, "No. de serie");
+    headers.pop();
+  }
+  const title = `${currentModule.title} - ${currentView.label}`;
+  const fname = `${currentKey}-${currentViewKey}`;
+  if (format === "pdf") {
+    window.gestionExport?.toPdf({ filename: fname, title, columns: headers, rows: dataRows });
+  } else {
+    window.gestionExport?.toExcel({ filename: fname, sheetName: currentView.label, title, columns: headers, rows: dataRows });
+  }
+}
+
+function exportReportFormat(index = 0, format = "excel") {
+  const reportSources = [
+    ["ventas", "facturas"],
+    ["inventarios", "productos"],
+    ["compras", "ordenes"],
+    ["costos", "hojas"],
+    ["ventas", "cobranza"],
+    ["contabilidad", "movimientos"],
+  ];
+  const [targetModule, targetView] = reportSources[index] || ["ventas", "facturas"];
+  const viewDef = modules[targetModule]?.views?.[targetView] || currentView;
+  const datasetRows = moduleRows(targetModule, targetView).map((r) => r.map((c) => localizeBusinessText(c)));
+  const headers = [...(viewDef.columns || ["Columna"])];
+  if (headers.at(-1) === "Acciones") {
+    headers.splice(-1, 0, "No. de serie");
+    headers.pop();
+  }
+  const title = reports[index]?.[0] || viewDef.label;
+  if (format === "pdf") {
+    window.gestionExport?.toPdf({ filename: title, title, columns: headers, rows: datasetRows });
+  } else {
+    window.gestionExport?.toExcel({ filename: title, sheetName: title, title, columns: headers, rows: datasetRows });
+  }
+}
+
 function exportInventory() {
+  return exportCurrentView("excel");
+}
+
+function exportInventoryLegacy() {
   const dataRows = filteredRows().map(({ row }) => row);
   const headers = [...currentView.columns];
   headers.splice(-1, 0, "No. de serie");
@@ -1117,13 +1278,20 @@ function initializePage() {
   renderFilterOptions();
   renderTable();
   searchInput.addEventListener("input", renderTable);
+  searchInput.addEventListener("input", renderTable);
   filterInput.addEventListener("change", renderTable);
+  document.querySelector("#module-export-excel")?.addEventListener("click", () => exportCurrentView("excel"));
+  document.querySelector("#module-export-pdf")?.addEventListener("click", () => exportCurrentView("pdf"));
   syncDataset();
 }
 
 view.addEventListener("click", async (event) => {
   const posButton = event.target.closest("[data-pos]");
   if (posButton) return handlePosAction(posButton);
+  const reportExcelBtn = event.target.closest("[data-report-excel]");
+  if (reportExcelBtn) return exportReportFormat(Number(reportExcelBtn.dataset.reportExcel), "excel");
+  const reportPdfBtn = event.target.closest("[data-report-pdf]");
+  if (reportPdfBtn) return exportReportFormat(Number(reportPdfBtn.dataset.reportPdf), "pdf");
   const reportButton = event.target.closest("[data-report]");
   if (reportButton) return exportReport(Number(reportButton.dataset.report));
   const button = event.target.closest("[data-action]");

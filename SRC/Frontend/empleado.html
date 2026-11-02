@@ -20,7 +20,8 @@
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
           <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
-          <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./contabilidad.html"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./nomina.html"><img src="./assets/icons/nomina.svg" alt="" />N&oacute;mina</a>
         </nav>
         <div class="user-box">
           <div class="avatar">--</div>
@@ -101,6 +102,22 @@
                 <div class="field">
                   <label for="role">Area Operativa</label>
                   <select id="role" name="systemRole"><option>Empleado</option><option>Inventarios</option><option>Ventas</option><option>Compras</option><option>Contabilidad</option></select>
+                </div>
+                <div class="field">
+                  <label for="base-salary">Salario Base</label>
+                  <input id="base-salary" name="baseSalary" type="number" step="0.01" min="0" placeholder="0.00" value="0.00" />
+                </div>
+                <div class="field">
+                  <label for="payment-frequency">Periodicidad de Pago</label>
+                  <select id="payment-frequency" name="paymentFrequency"><option>Semanal</option><option selected>Quincenal</option><option>Mensual</option></select>
+                </div>
+                <div class="field">
+                  <label for="bank-account">Cuenta Bancaria (Dispersion de Nomina)</label>
+                  <input id="bank-account" name="bankAccount" type="text" maxlength="80" placeholder="Ej. 2000-1458-9921" />
+                </div>
+                <div class="field">
+                  <label for="payroll-email">Nomina al Correo [SI / NO]</label>
+                  <select id="payroll-email" name="payrollEmailEnabled"><option value="SI" selected>SI - Enviar recibo en PDF al correo</option><option value="NO">NO - No enviar por correo</option></select>
                 </div>
               </div>
               <p class="input-error" id="employee-form-error" role="alert" hidden></p>

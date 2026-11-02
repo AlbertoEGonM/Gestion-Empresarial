@@ -20,7 +20,8 @@
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
           <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
-          <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./contabilidad.html"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./nomina.html"><img src="./assets/icons/nomina.svg" alt="" />N&oacute;mina</a>
         </nav>
         <div class="user-box">
           <div class="avatar">--</div>
@@ -51,7 +52,7 @@
               <h1>Bitacora de Actividad y Seguridad</h1>
               <p>Trazabilidad en tiempo real de inicios de sesion, autorizaciones, cambios de inventario textil y expedientes.</p>
             </div>
-            <button class="secondary-action" id="audit-export-csv" type="button">Exportar CSV</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary-action" id="audit-export-excel" type="button">Exportar Excel (.xlsx)</button><button class="secondary-action" id="audit-export-pdf" type="button">Exportar PDF</button><button class="secondary-action" id="audit-export-csv" type="button">Exportar CSV</button></div>
           </header>
           <section class="audit-panel">
             <div class="catalog-toolbar">
@@ -81,6 +82,7 @@
     </main>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/export-utils.js"></script>
     <script src="./assets/js/bitacora.js"></script>
   </body>
 </html>
