@@ -74,7 +74,8 @@
             <a class="coi-flow-step" href="./modulo.html?modulo=contabilidad&vista=bancos">Bancos</a>
           </nav>
 
-          <p class="access-notice" id="coi-toast" hidden></p>
+          <section class="module-metrics" id="coi-metrics" aria-label="Resumen contable"></section>
+          <p class="module-toast" id="coi-toast" role="status" hidden></p>
 
           <!-- VISTA 1: CATALOGO DE CUENTAS -->
           <section class="erp-panel" id="view-cuentas">
@@ -346,7 +347,7 @@
                 <button type="button" class="btn-pdf" id="trial-pdf">Exportar PDF</button>
               </div>
             </div>
-            <h2 id="trial-heading-display" style="margin:4px 0 12px;font-size:16px;color:#1e3a8a">Balanza de Comprobacion General</h2>
+            <h2 id="trial-heading-display" class="coi-section-subtitle">Balanza de Comprobacion General</h2>
             <div class="coi-boxed-table-wrap">
               <table class="coi-boxed-table" id="trial-table">
                 <thead>

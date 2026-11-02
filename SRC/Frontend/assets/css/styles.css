@@ -4077,3 +4077,205 @@ select[aria-invalid="true"] {
     width: 100%;
   }
 }
+
+
+/* ==========================================================================
+   Animaciones, Transiciones y Refinamiento Visual Global (ERP Profesional)
+   ========================================================================== */
+
+@keyframes pageReveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardReveal {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialogZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes toastPop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.content-area,
+.purchase-shell,
+.signup-shell {
+  animation: pageReveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.module-metrics article,
+.metric-strip div,
+.employee-summary div,
+.module-card,
+.admin-card,
+.pos-product-card,
+.report-card,
+.help-card,
+.accounting-document-card,
+.config-card {
+  animation: cardReveal 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.18s ease;
+}
+
+.module-metrics article:nth-child(2),
+.metric-strip div:nth-child(2),
+.employee-summary div:nth-child(2) {
+  animation-delay: 0.04s;
+}
+
+.module-metrics article:nth-child(3),
+.metric-strip div:nth-child(3),
+.employee-summary div:nth-child(3) {
+  animation-delay: 0.08s;
+}
+
+.module-metrics article:nth-child(4),
+.metric-strip div:nth-child(4),
+.employee-summary div:nth-child(4) {
+  animation-delay: 0.12s;
+}
+
+.module-metrics article:hover,
+.metric-strip div:hover,
+.employee-summary div:hover,
+.pos-product-card:hover,
+.report-card:hover,
+.accounting-document-card:hover {
+  border-color: rgba(74, 111, 165, 0.35);
+  box-shadow: 0 8px 22px rgba(24, 24, 27, 0.05);
+  transform: translateY(-2px);
+}
+
+.module-card:hover,
+.admin-card:hover,
+.help-card:hover {
+  transform: translateY(-2px);
+}
+
+.side-nav a,
+.module-tabs a,
+.catalog-tabs button {
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.15s ease;
+}
+
+.side-nav a:hover {
+  transform: translateX(2px);
+}
+
+.primary-action,
+.secondary-action,
+.submit-button {
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.15s ease;
+}
+
+.primary-action:hover:not(:disabled),
+.submit-button:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(74, 111, 165, 0.22);
+  transform: translateY(-1px);
+}
+
+.secondary-action:hover:not(:disabled) {
+  background: var(--primary-soft);
+  border-color: rgba(74, 111, 165, 0.45);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.module-table,
+.employee-panel,
+.catalog-panel,
+.audit-panel,
+.permission-matrix,
+.approval-panel {
+  animation: cardReveal 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.03);
+}
+
+.module-table-row:not(.module-table-head),
+.employee-row:not(.head),
+.catalog-row:not(.head),
+.audit-row:not(.head),
+.approval-row-detailed {
+  transition: background-color 0.15s ease;
+}
+
+.module-table-row:not(.module-table-head):hover,
+.employee-row:not(.head):hover,
+.catalog-row:not(.head):hover,
+.audit-row:not(.head):hover,
+.approval-row-detailed:hover {
+  background: rgba(74, 111, 165, 0.035);
+}
+
+.row-actions button,
+.row-actions a {
+  border-radius: 6px;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.row-actions button:hover,
+.row-actions a:hover {
+  background: var(--primary-soft);
+  transform: scale(1.06);
+}
+
+dialog[open] .module-dialog-form,
+dialog[open] .confirm-dialog-card {
+  animation: dialogZoomIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.module-toast {
+  animation: toastPop 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 10px 26px rgba(24, 24, 27, 0.18);
+}
+
+.module-toolbar-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}

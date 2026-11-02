@@ -42,9 +42,10 @@
     if (!toastEl) return;
     toastEl.hidden = false;
     toastEl.textContent = msg;
-    toastEl.style.background = isError ? "#fef2f2" : "#ecfdf5";
-    toastEl.style.color = isError ? "#991b1b" : "#065f46";
-    toastEl.style.borderColor = isError ? "#fecaca" : "#a7f3d0";
+    toastEl.classList.toggle("error", Boolean(isError));
+
+
+
     clearTimeout(showToast.timer);
     showToast.timer = setTimeout(() => {
       toastEl.hidden = true;
@@ -78,12 +79,38 @@
     loadCurrentView();
   }
 
+  function renderNoiMetrics() {
+    const metricsEl = document.querySelector("#noi-metrics");
+    if (!metricsEl) return;
+    const totalEmp = employeesCache.length;
+    const emailSi = employeesCache.filter((e) => e.payrollEmailEnabled).length;
+    const totalP = conceptsCache.filter((c) => c.conceptType === "P").length;
+    const totalD = conceptsCache.filter((c) => c.conceptType === "D").length;
+    const totalNet = receiptsCache.reduce((acc, r) => acc + Number(r.netPay || 0), 0);
+    metricsEl.innerHTML = [
+      { label: "Trabajadores en nómina", value: String(totalEmp), delta: `${emailSi} con envío por correo (SI)` },
+      { label: "Conceptos P001-P050 / D001-D050", value: String(conceptsCache.length), delta: `${totalP} percepciones · ${totalD} deducciones` },
+      { label: "Recibos del periodo", value: String(receiptsCache.length), delta: `Neto: ${money(totalNet)}` },
+      { label: "Periodos cerrados", value: String(closuresCache.length), delta: "Cierre de nómina NOI 11.00.20" },
+    ]
+      .map(
+        (m) => `
+        <article>
+          <p class="metric-label">${escapeHtml(m.label)}</p>
+          <p class="metric-value">${escapeHtml(m.value)}</p>
+          <p class="metric-delta">${escapeHtml(m.delta)}</p>
+        </article>`
+      )
+      .join("");
+  }
+
   // -------------------- 1. DATOS PERSONALES / SALARIO / NOMINA AL CORREO SI/NO --------------------
   async function loadEmployees() {
     const data = await api("/api/payroll/employees");
     employeesCache = data.employees || [];
     renderEmployeesTable();
     populateEmployeeSelect();
+    renderNoiMetrics();
   }
 
   function renderEmployeesTable() {
@@ -150,6 +177,7 @@
   async function loadConcepts() {
     const data = await api("/api/payroll/concepts");
     conceptsCache = data.concepts || [];
+    renderNoiMetrics();
     const tbody = document.querySelector("#concepts-tbody");
     const datalist = document.querySelector("#payroll-concepts-datalist");
     if (datalist) {
@@ -192,6 +220,7 @@
       newBtn.disabled = false;
     }
     renderReceiptsTable();
+    renderNoiMetrics();
   }
 
   function renderReceiptsTable() {
@@ -305,6 +334,7 @@
   async function loadClosures() {
     const data = await api("/api/payroll/closures");
     closuresCache = data.closures || [];
+    renderNoiMetrics();
     const tbody = document.querySelector("#closures-tbody");
     if (!closuresCache.length) {
       tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#6b7280;padding:18px">No hay periodos cerrados todavía.</td></tr>`;
@@ -566,5 +596,7 @@
     window.gestionExport.toPdf({ filename: "cierres-nomina", title: "Bitácora de Cierres de Nómina", columns, rows });
   });
 
+  window.addEventListener("gestion:company-changed", () => loadCurrentView());
+  renderNoiMetrics();
   switchView(currentView, false);
 })();

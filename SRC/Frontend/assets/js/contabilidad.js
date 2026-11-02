@@ -44,9 +44,10 @@
     if (!toastEl) return;
     toastEl.hidden = false;
     toastEl.textContent = msg;
-    toastEl.style.background = isError ? "#fef2f2" : "#ecfdf5";
-    toastEl.style.color = isError ? "#991b1b" : "#065f46";
-    toastEl.style.borderColor = isError ? "#fecaca" : "#a7f3d0";
+    toastEl.classList.toggle("error", Boolean(isError));
+    void (0
+    );
+    renderCoiMetrics();
     clearTimeout(showToast.timer);
     showToast.timer = setTimeout(() => {
       toastEl.hidden = true;
@@ -87,6 +88,7 @@
     const data = await api(`/api/ledger/accounts?q=${encodeURIComponent(search)}&period=${encodeURIComponent(period)}`);
     accountsCache = data.accounts || [];
     renderAccountsTable();
+    renderCoiMetrics();
     populateAccountSelects();
   }
 
@@ -173,6 +175,7 @@
     const data = await api(`/api/ledger/policies?period=${encodeURIComponent(period)}&type=${encodeURIComponent(type)}`);
     policiesCache = data.policies || [];
     renderPoliciesTable();
+    renderCoiMetrics();
   }
 
   function renderPoliciesTable() {
@@ -724,5 +727,29 @@
     window.gestionExport.toPdf({ filename: "tipos-de-cambio", title: "Historial de Tipos de Cambio ($USD / $LEM)", columns, rows });
   });
 
+  function renderCoiMetrics() {
+    const metricsEl = document.querySelector("#coi-metrics");
+    if (!metricsEl) return;
+    const totalClose = accountsCache.reduce((s, a) => s + Number(a.closingBalance || 0), 0);
+    const totalDebit = policiesCache.reduce((s, p) => s + Number(p.totalDebit || 0), 0);
+    const latestRate = ratesCache[0]?.rate || statementsCache?.exchangeRate || 24.75;
+    const cards = [
+      ["Cuentas en catalogo", String(accountsCache.length), "Cuentas contables activas"],
+      ["Saldo neto acumulado", `L ${money(totalClose)}`, "En cuentas del periodo"],
+      ["Polizas registradas", String(policiesCache.length), `Cargos: L ${money(totalDebit)}`],
+      ["Tipo de cambio USD/LEM", `L ${Number(latestRate).toFixed(4)}`, "Conversion $USD ↔ $LEM"],
+    ];
+    metricsEl.innerHTML = cards
+      .map(([label, val, sub]) => `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(val)}</strong><small>${escapeHtml(sub)}</small></article>`)
+      .join("");
+  }
+
+  window.addEventListener("gestion:company-changed", () => {
+    accountsCache = [];
+    policiesCache = [];
+    loadCurrentView();
+  });
+
   switchView(currentView, false);
+  renderCoiMetrics();
 })();

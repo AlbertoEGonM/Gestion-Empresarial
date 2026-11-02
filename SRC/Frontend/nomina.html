@@ -71,7 +71,8 @@
             <button type="button" class="coi-flow-step" data-view="cierre">5. Cierre de N&oacute;mina</button>
           </nav>
 
-          <p class="access-notice" id="noi-toast" hidden></p>
+          <section class="module-metrics" id="noi-metrics" aria-label="Resumen de nomina"></section>
+          <p class="module-toast" id="noi-toast" role="status" hidden></p>
 
           <!-- VISTA 1: DATOS PERSONALES, SALARIO Y NOMINA AL CORREO SI/NO -->
           <section class="erp-panel" id="view-empleados">
@@ -276,7 +277,7 @@
             </form>
 
             <!-- Reporte de Nomina con las columnas exactas del esquema: N° | Empleado | Cuenta (y Datos del trabajador) | Importe -->
-            <h3 style="margin:6px 0 10px;font-size:15px;color:#1e3a8a">Reporte de N&oacute;mina</h3>
+            <h3 class="coi-section-subtitle">Reporte de N&oacute;mina</h3>
             <div class="coi-boxed-table-wrap">
               <table class="coi-boxed-table" id="receipts-table">
                 <thead>
@@ -317,7 +318,7 @@
               </div>
             </div>
 
-            <h3 style="margin:4px 0 10px;font-size:15px;color:#1e3a8a">Acumulados por Concepto (Prestaciones P y Deducciones D)</h3>
+            <h3 class="coi-section-subtitle">Acumulados por Concepto (Prestaciones P y Deducciones D)</h3>
             <div class="coi-boxed-table-wrap" style="margin-bottom:18px">
               <table class="coi-boxed-table" id="accum-concepts-table">
                 <thead>
@@ -333,7 +334,7 @@
               </table>
             </div>
 
-            <h3 style="margin:4px 0 10px;font-size:15px;color:#1e3a8a">Acumulados por Trabajador en el Periodo</h3>
+            <h3 class="coi-section-subtitle">Acumulados por Trabajador en el Periodo</h3>
             <div class="coi-boxed-table-wrap">
               <table class="coi-boxed-table" id="accum-emp-table">
                 <thead>

@@ -605,12 +605,12 @@ function renderFilterOptions() {
     if (!categorySelect) {
       filterControl.insertAdjacentHTML(
         "afterend",
-        `<label class="module-filter"><span>Categoria</span><select id="inventory-category-filter"><option value="">Todas</option></select></label><label class="module-filter"><span>Existencia</span><select id="inventory-stock-filter"><option value="">Todas</option><option value="positive">Positiva</option><option value="zero">En cero</option><option value="negative">Negativa</option></select></label><a class="secondary-action" href="./registrar-ingreso.html">+ Costear lote</a><button class="secondary-action inventory-export" id="inventory-export" type="button">Exportar a Excel</button>`
+        `<label class="module-filter"><span>Categoria</span><select id="inventory-category-filter"><option value="">Todas</option></select></label><label class="module-filter"><span>Existencia</span><select id="inventory-stock-filter"><option value="">Todas</option><option value="positive">Positiva</option><option value="zero">En cero</option><option value="negative">Negativa</option></select></label><a class="secondary-action" href="./registrar-ingreso.html">+ Costear lote</a>`
       );
       categorySelect = document.querySelector("#inventory-category-filter");
       categorySelect.addEventListener("change", renderTable);
       document.querySelector("#inventory-stock-filter").addEventListener("change", renderTable);
-      document.querySelector("#inventory-export").addEventListener("click", exportInventory);
+      document.querySelector("#inventory-export")?.addEventListener("click", exportInventory);
     }
     const previousCat = categorySelect.value;
     categorySelect.innerHTML =
