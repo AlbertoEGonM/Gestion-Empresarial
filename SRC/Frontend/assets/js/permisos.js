@@ -15,6 +15,7 @@ const MODULE_DEFINITIONS = [
       { key: "kardex", label: "Kardex" },
       { key: "almacenes", label: "Almacenes" },
       { key: "lotes", label: "Lotes y Series" },
+      { key: "precios", label: "Precios y Otros Precios (5 Listas)" },
       { key: "impuestos", label: "Esquemas de Impuestos" },
     ],
   },

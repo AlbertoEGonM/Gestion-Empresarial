@@ -9,7 +9,7 @@ const ROLE_MODULES = Object.freeze({
 });
 
 const MODULE_VIEWS_MAP = Object.freeze({
-  inventarios: ["productos", "kardex", "almacenes", "lotes", "impuestos"],
+  inventarios: ["productos", "precios", "impuestos", "kardex", "almacenes", "lotes"],
   compras: ["proveedores", "requisiciones", "ordenes", "recepciones", "pagos"],
   ventas: ["clientes", "cotizaciones", "pedidos", "facturas", "cobranza", "pos"],
   contabilidad: ["cuentas", "polizas", "auxiliares", "balanza", "estados", "tipocambio", "bancos"],

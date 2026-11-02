@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | Contabilidad (Aspel COI)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
+    <link rel="stylesheet" href="./assets/css/contabilidad.css?v=1" />
+  </head>
+  <body>
+    <main class="app-layout">
+      <aside class="sidebar">
+        <a class="brand sidebar-brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
+        <nav class="side-nav" aria-label="Modulos">
+          <p>Modulos</p>
+          <a href="./dashboard.html"><img src="./assets/icons/dashboard.svg" alt="" />Dashboard</a>
+          <a href="./admin.html" data-module="administrador"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
+          <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
+          <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a class="active" href="./contabilidad.html"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a href="./nomina.html"><img src="./assets/icons/nomina.svg" alt="" />N&oacute;mina</a>
+        </nav>
+        <div class="user-box">
+          <div class="avatar">--</div>
+          <div>
+            <strong>Usuario</strong>
+            <span>Sesion activa</span>
+          </div>
+          <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="breadcrumbs">
+            <a href="./dashboard.html">Inicio</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <a href="./contabilidad.html">Contabilidad</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <strong id="coi-crumb">Cat&aacute;logo de Cuentas</strong>
+          </div>
+          <div class="topbar-actions">
+            <span id="current-date"></span>
+            <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
+          </div>
+        </header>
+
+        <section class="content-area">
+          <header class="page-title">
+            <div>
+              <h1 id="coi-title">Contabilidad General</h1>
+              <p id="coi-subtitle">Cat&aacute;logo de cuentas, p&oacute;lizas (Co, Di, Eg, Ig, Vt), auxiliares, balanza de comprobaci&oacute;n, tipo de cambio y estados financieros.</p>
+            </div>
+          </header>
+
+          <!-- Flujo contable: Cuentas -> Polizas -> Auxiliares -> Balanza de Comprobacion -> Estado de Resultados / Balance General -->
+          <nav class="coi-flow-bar" aria-label="Flujo contable">
+            <span class="coi-flow-label">Flujo Contable:</span>
+            <button type="button" class="coi-flow-step active" data-view="cuentas">1. Cat&aacute;logo de Cuentas</button>
+            <span class="coi-flow-arrow">&rarr;</span>
+            <button type="button" class="coi-flow-step" data-view="polizas">2. P&oacute;lizas (Co, Di, Eg, Ig, Vt)</button>
+            <span class="coi-flow-arrow">&rarr;</span>
+            <button type="button" class="coi-flow-step" data-view="auxiliares">3. Auxiliares</button>
+            <span class="coi-flow-arrow">&rarr;</span>
+            <button type="button" class="coi-flow-step" data-view="balanza">4. Balanza de Comprobaci&oacute;n</button>
+            <span class="coi-flow-arrow">&rarr;</span>
+            <button type="button" class="coi-flow-step" data-view="estados">5. Estado de Resultados / Balance General</button>
+            <span class="coi-flow-arrow">|</span>
+            <button type="button" class="coi-flow-step" data-view="tipocambio">Tipo de Cambio ($USD / $LEM)</button>
+            <a class="coi-flow-step" href="./modulo.html?modulo=contabilidad&vista=bancos">Bancos</a>
+          </nav>
+
+          <p class="access-notice" id="coi-toast" hidden></p>
+
+          <!-- VISTA 1: CATALOGO DE CUENTAS -->
+          <section class="erp-panel" id="view-cuentas">
+            <div class="erp-toolbar">
+              <div class="erp-filters">
+                <label>
+                  <span>Buscar (N&uacute;mero / Descripci&oacute;n)</span>
+                  <input type="search" id="accounts-search" placeholder="Ej. 1101 o Bancos..." />
+                </label>
+                <label>
+                  <span>Periodo de saldos</span>
+                  <input type="month" id="accounts-period" value="2026-01" />
+                </label>
+              </div>
+              <div class="erp-actions">
+                <button type="button" class="btn-excel" id="accounts-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="accounts-pdf">Exportar PDF</button>
+                <button type="button" class="primary-action" id="btn-new-account">+ Nueva Cuenta</button>
+              </div>
+            </div>
+
+            <!-- Formulario inline colapsable para crear/editar cuenta -->
+            <form class="erp-panel" id="account-form" hidden style="background:#f8fafc">
+              <h3 id="account-form-title" style="margin:0 0 12px;font-size:15px">Registrar Cuenta Contable</h3>
+              <input type="hidden" id="acc-id" />
+              <div class="erp-form-grid">
+                <label>
+                  <span>Cuenta (N&uacute;mero) *</span>
+                  <input type="text" id="acc-code" placeholder="Ej. 1101-001" required />
+                </label>
+                <label>
+                  <span>Descripci&oacute;n *</span>
+                  <input type="text" id="acc-name" placeholder="Ej. Caja y Bancos Moneda Nacional" required />
+                </label>
+                <label>
+                  <span>C&oacute;digo Agrupador *</span>
+                  <input type="text" id="acc-group" placeholder="Ej. 102.01" />
+                </label>
+                <label>
+                  <span>Rubro / Naturaleza *</span>
+                  <select id="acc-type">
+                    <option value="ASSET_CURRENT">Activo circulante (Deudora)</option>
+                    <option value="ASSET_NONCURRENT">Activo no circulante (Deudora)</option>
+                    <option value="LIABILITY_CURRENT">Pasivo a corto plazo (Acreedora)</option>
+                    <option value="LIABILITY_LONG">Pasivo a largo plazo (Acreedora)</option>
+                    <option value="EQUITY">Capital contable (Acreedora)</option>
+                    <option value="INCOME">Ingresos / Ventas (Acreedora)</option>
+                    <option value="COST">Costo de ventas (Deudora)</option>
+                    <option value="EXPENSE">Gastos generales (Deudora)</option>
+                    <option value="OTHER_INCOME">Productos financieros (Acreedora)</option>
+                    <option value="OTHER_EXPENSE">Gastos financieros (Deudora)</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Saldo Inicial</span>
+                  <input type="number" id="acc-opening" step="0.01" value="0.00" />
+                </label>
+                <label>
+                  <span>Moneda</span>
+                  <select id="acc-currency">
+                    <option value="HNL">Lempira (HNL / $LEM)</option>
+                    <option value="USD">D&oacute;lar ($USD)</option>
+                  </select>
+                </label>
+              </div>
+              <div class="erp-actions">
+                <button type="submit" class="primary-action">Guardar Cuenta</button>
+                <button type="button" class="secondary-action" id="acc-cancel">Cancelar</button>
+              </div>
+            </form>
+
+            <!-- Tabla con las 5 columnas exactas del diseno del usuario -->
+            <div class="coi-boxed-table-wrap">
+              <table class="coi-boxed-table" id="accounts-table">
+                <thead>
+                  <tr>
+                    <th>Cuenta</th>
+                    <th>Descripci&oacute;n</th>
+                    <th>C&oacute;digo Agrupador</th>
+                    <th class="num-col">Saldo Inicial</th>
+                    <th class="num-col">Saldo Final</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="accounts-tbody"></tbody>
+                <tfoot id="accounts-tfoot"></tfoot>
+              </table>
+            </div>
+          </section>
+
+          <!-- VISTA 2: POLIZAS -->
+          <section class="erp-panel" id="view-polizas" hidden>
+            <div class="erp-toolbar">
+              <div class="erp-filters">
+                <label>
+                  <span>Periodo</span>
+                  <input type="month" id="policy-filter-period" value="2026-01" />
+                </label>
+                <label>
+                  <span>Tipo de P&oacute;liza</span>
+                  <select id="policy-filter-type">
+                    <option value="">Todas (Co, Di, Eg, Ig, Vt)</option>
+                    <option value="CO">Compra (Co)</option>
+                    <option value="DI">Diario (Di)</option>
+                    <option value="EG">Egreso (Eg)</option>
+                    <option value="IG">Ingreso (Ig)</option>
+                    <option value="VT">Venta (Vt)</option>
+                  </select>
+                </label>
+              </div>
+              <div class="erp-actions">
+                <button type="button" class="btn-excel" id="policies-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="policies-pdf">Exportar PDF</button>
+                <button type="button" class="primary-action" id="btn-new-policy">+ Nueva P&oacute;liza</button>
+              </div>
+            </div>
+
+            <form class="erp-panel" id="policy-form" hidden style="background:#f8fafc">
+              <h3 id="policy-form-title" style="margin:0 0 12px;font-size:15px">Captura de P&oacute;liza Contable</h3>
+              <input type="hidden" id="pol-id" />
+              <div class="erp-form-grid">
+                <label>
+                  <span>Tipo de P&oacute;liza *</span>
+                  <select id="pol-type" required>
+                    <option value="CO">Compra (Co)</option>
+                    <option value="DI" selected>Diario (Di)</option>
+                    <option value="EG">Egreso (Eg)</option>
+                    <option value="IG">Ingreso (Ig)</option>
+                    <option value="VT">Venta (Vt)</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Fecha *</span>
+                  <input type="date" id="pol-date" required />
+                </label>
+                <label>
+                  <span>Concepto General *</span>
+                  <input type="text" id="pol-concept" placeholder="Ej. Compra de rollos de gabardina segun factura..." required />
+                </label>
+                <label>
+                  <span>Moneda</span>
+                  <select id="pol-currency">
+                    <option value="HNL">$LEM (HNL)</option>
+                    <option value="USD">$USD (D&oacute;lares)</option>
+                  </select>
+                </label>
+                <label id="pol-rate-wrap" hidden>
+                  <span>Tipo de Cambio (L por $1 USD)</span>
+                  <input type="number" id="pol-rate" step="0.0001" value="24.7500" />
+                </label>
+              </div>
+
+              <datalist id="ledger-accounts-datalist"></datalist>
+              <table class="policy-lines-table">
+                <thead>
+                  <tr>
+                    <th style="width:45px">#</th>
+                    <th style="width:220px">Cuenta Contable</th>
+                    <th>Concepto del Movimiento</th>
+                    <th style="width:150px" class="num-col">Debe (Cargo)</th>
+                    <th style="width:150px" class="num-col">Haber (Abono)</th>
+                    <th style="width:70px">Quitar</th>
+                  </tr>
+                </thead>
+                <tbody id="pol-lines-tbody"></tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="3" style="text-align:right;font-weight:700">Totales de la P&oacute;liza:</td>
+                    <td class="num-col" id="pol-total-debit">0.00</td>
+                    <td class="num-col" id="pol-total-credit">0.00</td>
+                    <td id="pol-diff-status" class="balance-Diff-ok">Cuadrada</td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <div class="erp-actions" style="justify-content:space-between;margin-top:10px">
+                <button type="button" class="secondary-action" id="pol-add-line">+ Agregar Partida</button>
+                <div class="erp-actions">
+                  <button type="submit" class="primary-action" id="pol-submit">Guardar P&oacute;liza</button>
+                  <button type="button" class="secondary-action" id="pol-cancel">Cancelar</button>
+                </div>
+              </div>
+            </form>
+
+            <div class="coi-boxed-table-wrap">
+              <table class="coi-boxed-table" id="policies-table">
+                <thead>
+                  <tr>
+                    <th>P&oacute;liza</th>
+                    <th>Tipo</th>
+                    <th>Fecha</th>
+                    <th>Concepto</th>
+                    <th>Moneda</th>
+                    <th class="num-col">Debe (Cargos)</th>
+                    <th class="num-col">Haber (Abonos)</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="policies-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- VISTA 3: AUXILIARES -->
+          <section class="erp-panel" id="view-auxiliares" hidden>
+            <div class="erp-toolbar">
+              <div class="erp-filters">
+                <label>
+                  <span>A&ntilde;o</span>
+                  <select id="aux-year">
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                    <option value="2026" selected>2026</option>
+                    <option value="2027">2027</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Mes</span>
+                  <select id="aux-month">
+                    <option value="01" selected>01 - Enero</option>
+                    <option value="02">02 - Febrero</option>
+                    <option value="03">03 - Marzo</option>
+                    <option value="04">04 - Abril</option>
+                    <option value="05">05 - Mayo</option>
+                    <option value="06">06 - Junio</option>
+                    <option value="07">07 - Julio</option>
+                    <option value="08">08 - Agosto</option>
+                    <option value="09">09 - Septiembre</option>
+                    <option value="10">10 - Octubre</option>
+                    <option value="11">11 - Noviembre</option>
+                    <option value="12">12 - Diciembre</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Cuenta Desde</span>
+                  <select id="aux-from"><option value="">Todas (Inicio)</option></select>
+                </label>
+                <label>
+                  <span>Cuenta Hasta</span>
+                  <select id="aux-to"><option value="">Todas (Fin)</option></select>
+                </label>
+                <button type="button" class="primary-action" id="aux-query">Consultar Auxiliar</button>
+              </div>
+              <div class="erp-actions">
+                <button type="button" class="btn-excel" id="aux-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="aux-pdf">Exportar PDF</button>
+              </div>
+            </div>
+            <div id="aux-results"></div>
+          </section>
+
+          <!-- VISTA 4: BALANZA DE COMPROBACION -->
+          <section class="erp-panel" id="view-balanza" hidden>
+            <div class="erp-toolbar">
+              <div class="erp-filters">
+                <label style="min-width:290px">
+                  <span>T&iacute;tulo de la Balanza de Comprobaci&oacute;n</span>
+                  <input type="text" id="trial-title" value="Balanza de Comprobacion General" />
+                </label>
+                <label>
+                  <span>Periodo (A&ntilde;o y Mes)</span>
+                  <input type="month" id="trial-period" value="2026-01" />
+                </label>
+                <button type="button" class="primary-action" id="trial-refresh">Actualizar Balanza</button>
+              </div>
+              <div class="erp-actions">
+                <button type="button" class="btn-excel" id="trial-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="trial-pdf">Exportar PDF</button>
+              </div>
+            </div>
+            <h2 id="trial-heading-display" style="margin:4px 0 12px;font-size:16px;color:#1e3a8a">Balanza de Comprobacion General</h2>
+            <div class="coi-boxed-table-wrap">
+              <table class="coi-boxed-table" id="trial-table">
+                <thead>
+                  <tr>
+                    <th>Cuenta</th>
+                    <th>Descripci&oacute;n</th>
+                    <th>C&oacute;digo Agrupador</th>
+                    <th class="num-col">Saldo Inicial</th>
+                    <th class="num-col">Debe (Cargos)</th>
+                    <th class="num-col">Haber (Abonos)</th>
+                    <th class="num-col">Saldo Final</th>
+                  </tr>
+                </thead>
+                <tbody id="trial-tbody"></tbody>
+                <tfoot id="trial-tfoot"></tfoot>
+              </table>
+            </div>
+          </section>
+
+          <!-- VISTA 5: ESTADOS FINANCIEROS (ESTADO DE RESULTADOS / BALANCE GENERAL EN $LEM O $USD) -->
+          <section class="erp-panel" id="view-estados" hidden>
+            <div class="erp-toolbar">
+              <div class="erp-filters">
+                <label>
+                  <span>Reporte Financiero</span>
+                  <select id="stmt-type">
+                    <option value="income">Estado de Resultados</option>
+                    <option value="balance">Balance General</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Periodo</span>
+                  <input type="month" id="stmt-period" value="2026-01" />
+                </label>
+                <label>
+                  <span>Moneda de Expresi&oacute;n ($USD / $LEM)</span>
+                  <select id="stmt-currency">
+                    <option value="HNL">$LEM - Lempiras (HNL)</option>
+                    <option value="USD">$USD - D&oacute;lares (USD)</option>
+                  </select>
+                </label>
+                <button type="button" class="primary-action" id="stmt-refresh">Generar</button>
+              </div>
+              <div class="erp-actions">
+                <a class="secondary-action" href="./reportes-contables.html">Vista Impresi&oacute;n A4</a>
+                <button type="button" class="btn-excel" id="stmt-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="stmt-pdf">Exportar PDF</button>
+              </div>
+            </div>
+            <p id="stmt-rate-banner" style="font-size:12.5px;color:#4b5563;margin:0 0 10px"></p>
+            <div class="coi-boxed-table-wrap">
+              <table class="coi-boxed-table" id="stmt-table">
+                <thead id="stmt-thead"></thead>
+                <tbody id="stmt-tbody"></tbody>
+                <tfoot id="stmt-tfoot"></tfoot>
+              </table>
+            </div>
+          </section>
+
+          <!-- VISTA 6: TIPO DE CAMBIO ($USD / $LEM) -->
+          <section class="erp-panel" id="view-tipocambio" hidden>
+            <div class="erp-toolbar">
+              <form class="erp-filters" id="rate-form">
+                <label>
+                  <span>Fecha</span>
+                  <input type="date" id="rate-date" required />
+                </label>
+                <label>
+                  <span>Tipo de Cambio ($LEM por $1 USD)</span>
+                  <input type="number" id="rate-value" step="0.0001" placeholder="Ej. 24.7500" required />
+                </label>
+                <label>
+                  <span>Observaci&oacute;n</span>
+                  <input type="text" id="rate-notes" placeholder="Ej. Tasa oficial BCH" />
+                </label>
+                <button type="submit" class="primary-action">Guardar Tipo de Cambio</button>
+              </form>
+              <div class="erp-actions">
+                <button type="button" class="btn-excel" id="rates-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="rates-pdf">Exportar PDF</button>
+              </div>
+            </div>
+            <div class="coi-boxed-table-wrap">
+              <table class="coi-boxed-table" id="rates-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Moneda Base</th>
+                    <th class="num-col">Equivalencia en Lempiras ($LEM)</th>
+                    <th>Observaci&oacute;n</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="rates-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+    <script src="./assets/js/user-db.js"></script>
+    <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/export-utils.js"></script>
+    <script src="./assets/js/contabilidad.js"></script>
+  </body>
+</html>

@@ -101,4 +101,75 @@ async function sendRecoveryEmail({ to, username, recoveryUrl }) {
   return { delivered: true };
 }
 
-module.exports = { sendRecoveryEmail };
+async function sendPayrollReceiptEmail({ to, employeeName, companyName, periodLabel, netPay, currencySymbol = "L", pdfBuffer, filename = "recibo-nomina.pdf" }) {
+  const config = getMailConfig();
+  if (!isConfigured(config)) {
+    console.log(`SMTP no configurado. Recibo de nomina (${periodLabel}) preparado para ${to} (${employeeName}): ${currencySymbol} ${netPay}`);
+    return { delivered: false, reason: "SMTP_NOT_CONFIGURED" };
+  }
+
+  let socket = config.secure
+    ? tls.connect(config.port, config.host, { servername: config.host })
+    : net.connect(config.port, config.host);
+
+  await new Promise((resolve, reject) => {
+    socket.once("connect", resolve);
+    socket.once("secureConnect", resolve);
+    socket.once("error", reject);
+    socket.setTimeout(config.timeout, () => reject(new Error("Tiempo de espera agotado al conectar con SMTP.")));
+  });
+
+  await readLine(socket, config.timeout);
+  await command(socket, `EHLO ${process.env.SMTP_HELO || "localhost"}`, config.timeout);
+
+  if (!config.secure && process.env.SMTP_STARTTLS !== "false") {
+    await command(socket, "STARTTLS", config.timeout);
+    socket = await new Promise((resolve, reject) => {
+      const secureSocket = tls.connect({ socket, servername: config.host }, () => resolve(secureSocket));
+      secureSocket.once("error", reject);
+    });
+    await command(socket, `EHLO ${process.env.SMTP_HELO || "localhost"}`, config.timeout);
+  }
+
+  if (config.user && config.pass) {
+    await command(socket, "AUTH LOGIN", config.timeout);
+    await command(socket, Buffer.from(config.user).toString("base64"), config.timeout);
+    await command(socket, Buffer.from(config.pass).toString("base64"), config.timeout);
+  }
+
+  const boundary = `----=_GestionNomina_${Date.now()}`;
+  const textBody = `Hola ${employeeName},\r\n\r\nAdjuntamos tu recibo de nomina correspondiente al periodo ${periodLabel} en ${companyName}.\r\nImporte neto pagado: ${currencySymbol} ${Number(netPay || 0).toFixed(2)}.\r\n\r\nSaludos cordiales,\r\nDepartamento de Nomina - ${companyName}`;
+  const pdfBase64 = Buffer.from(pdfBuffer || "").toString("base64").replace(/(.{76})/g, "$1\r\n");
+
+  const message = [
+    `From: ${config.from}`,
+    `To: ${to}`,
+    `Subject: ${encodeSubject(`Recibo de Nomina ${periodLabel} - ${companyName}`)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    "Content-Type: text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    textBody,
+    `--${boundary}`,
+    `Content-Type: application/pdf; name="${filename}"`,
+    "Content-Transfer-Encoding: base64",
+    `Content-Disposition: attachment; filename="${filename}"`,
+    "",
+    pdfBase64,
+    `--${boundary}--`,
+  ].join("\r\n");
+
+  await command(socket, `MAIL FROM:<${config.from}>`, config.timeout);
+  await command(socket, `RCPT TO:<${to}>`, config.timeout);
+  await command(socket, "DATA", config.timeout);
+  socket.write(`${message}\r\n.\r\n`);
+  await readLine(socket, config.timeout);
+  socket.write("QUIT\r\n");
+  socket.end();
+  return { delivered: true };
+}
+
+module.exports = { sendRecoveryEmail, sendPayrollReceiptEmail };

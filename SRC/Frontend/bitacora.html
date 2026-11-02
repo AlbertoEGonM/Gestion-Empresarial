@@ -52,7 +52,7 @@
               <h1>Bitacora de Actividad y Seguridad</h1>
               <p>Trazabilidad en tiempo real de inicios de sesion, autorizaciones, cambios de inventario textil y expedientes.</p>
             </div>
-            <button class="secondary-action" id="audit-export-csv" type="button">Exportar CSV</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary-action" id="audit-export-excel" type="button">Exportar Excel (.xlsx)</button><button class="secondary-action" id="audit-export-pdf" type="button">Exportar PDF</button><button class="secondary-action" id="audit-export-csv" type="button">Exportar CSV</button></div>
           </header>
           <section class="audit-panel">
             <div class="catalog-toolbar">
@@ -82,6 +82,7 @@
     </main>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/export-utils.js"></script>
     <script src="./assets/js/bitacora.js"></script>
   </body>
 </html>

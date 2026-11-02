@@ -1,6 +1,7 @@
 const pool = require("../config/connection");
 const { requireModuleAccess, resolveTenantCompanyId } = require("../config/permissions");
 const { parsePagination } = require("../config/validator");
+const { listAccountsWithBalances } = require("./ledger");
 
 const REPORT_TYPES = [
   "income-statement",
@@ -95,6 +96,7 @@ function number(value) {
 }
 
 function closing(row) {
+  if (row.closing_override !== undefined) return number(row.closing_override);
   return number(row.opening_balance) + number(row.debit) - number(row.credit);
 }
 
@@ -230,11 +232,13 @@ async function getAccountingReport(user, query = {}) {
     };
   }
 
-  const [rows] = await pool.query(
+  const ledgerAccounts = await listAccountsWithBalances(companyId, { period });
+  const [balanceRows] = await pool.query(
     `SELECT id, company_id, period, account_code, account_name, account_type, opening_balance, debit, credit
      FROM accounting_balances WHERE company_id = ? AND period = ? ORDER BY account_code LIMIT ? OFFSET ?`,
     [companyId, period, limit, offset]
   );
+  const rows = ledgerAccounts.length ? ledgerAccounts.map((acc) => ({ account_code: acc.code, account_name: acc.name, account_type: acc.accountType, opening_balance: acc.periodOpening, debit: acc.debit, credit: acc.credit, closing_override: acc.closingBalance })) : balanceRows;
   if (type === "trial-balance") {
     return {
       type,

@@ -28,7 +28,7 @@
       </aside>
       <section class="workspace">
         <header class="topbar report-topbar">
-          <div class="breadcrumbs"><a href="./dashboard.html">Inicio</a><img src="./assets/icons/crumb.svg" alt="" /><a href="./modulo.html?modulo=contabilidad&vista=estados">Contabilidad</a><img src="./assets/icons/crumb.svg" alt="" /><strong>Documentos contables</strong></div>
+          <div class="breadcrumbs"><a href="./dashboard.html">Inicio</a><img src="./assets/icons/crumb.svg" alt="" /><a href="./contabilidad.html?vista=estados">Contabilidad</a><img src="./assets/icons/crumb.svg" alt="" /><strong>Documentos contables</strong></div>
           <div class="topbar-actions"><span id="current-date"></span><a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a></div>
         </header>
         <section class="content-area accounting-report-content">
@@ -37,6 +37,7 @@
             <label><span>Documento</span><select id="report-type"><option value="income-statement">Estado de resultados</option><option value="balance-sheet">Balance general</option><option value="trial-balance">Balanza de comprobacion</option><option value="payroll-catalog">Percepciones y deducciones</option><option value="sales-profit">Ventas y utilidad</option><option value="purchase-invoice">Factura de compra</option></select></label>
             <label><span>Periodo</span><input id="report-period" type="month" value="2026-01" /></label>
             <label id="report-company-field" hidden><span>Empresa</span><select id="report-company"></select></label>
+            <button class="secondary-action" id="report-excel" type="button">Exportar Excel (.xlsx)</button>
             <button class="secondary-action" id="report-csv" type="button">Descargar CSV</button>
             <button class="primary-action" id="report-print" type="button">Imprimir / PDF</button>
           </section>
@@ -49,6 +50,8 @@
     </main>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/export-utils.js"></script>
     <script src="./assets/js/accounting-reports.js"></script>
   </body>
 </html>

@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion Empresarial | N&oacute;mina (Aspel NOI)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
+    <link rel="stylesheet" href="./assets/css/contabilidad.css?v=1" />
+  </head>
+  <body>
+    <main class="app-layout">
+      <aside class="sidebar">
+        <a class="brand sidebar-brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
+        <nav class="side-nav" aria-label="Modulos">
+          <p>Modulos</p>
+          <a href="./dashboard.html"><img src="./assets/icons/dashboard.svg" alt="" />Dashboard</a>
+          <a href="./admin.html" data-module="administrador"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
+          <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
+          <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./contabilidad.html"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
+          <a class="active" href="./nomina.html"><img src="./assets/icons/nomina.svg" alt="" />N&oacute;mina</a>
+        </nav>
+        <div class="user-box">
+          <div class="avatar">--</div>
+          <div>
+            <strong>Usuario</strong>
+            <span>Sesion activa</span>
+          </div>
+          <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="breadcrumbs">
+            <a href="./dashboard.html">Inicio</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <a href="./nomina.html">N&oacute;mina</a>
+            <img src="./assets/icons/crumb.svg" alt="" />
+            <strong id="noi-crumb">Datos Personales y Salario</strong>
+          </div>
+          <div class="topbar-actions">
+            <span id="current-date"></span>
+            <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
+          </div>
+        </header>
+
+        <section class="content-area">
+          <header class="page-title">
+            <div>
+              <h1 id="noi-title">N&oacute;mina y Capital Humano</h1>
+              <p id="noi-subtitle">Datos personales, salario, n&oacute;mina al correo [SI/NO], conceptos P001-P050 y D001-D050, reporte de n&oacute;mina, acumulados y cierre.</p>
+            </div>
+          </header>
+
+          <!-- Barra de navegacion del flujo de Nomina -->
+          <nav class="coi-flow-bar" aria-label="Flujo de nomina">
+            <span class="coi-flow-label">Flujo N&oacute;mina:</span>
+            <button type="button" class="coi-flow-step active" data-view="empleados">1. Datos Personales / Salario / Correo [SI/NO]</button>
+            <span class="coi-flow-arrow">&rarr;</span>
+            <button type="button" class="coi-flow-step" data-view="conceptos">2. Conceptos (P001-P050 / D001-D050)</button>
+            <span class="coi-flow-arrow">&rarr;</span>
+            <button type="button" class="coi-flow-step" data-view="nominas">3. Captura y Reporte de N&oacute;mina</button>
+            <span class="coi-flow-arrow">&rarr;</span>
+            <button type="button" class="coi-flow-step" data-view="acumulados">4. Reporte de Acumulados</button>
+            <span class="coi-flow-arrow">&rarr;</span>
+            <button type="button" class="coi-flow-step" data-view="cierre">5. Cierre de N&oacute;mina</button>
+          </nav>
+
+          <p class="access-notice" id="noi-toast" hidden></p>
+
+          <!-- VISTA 1: DATOS PERSONALES, SALARIO Y NOMINA AL CORREO SI/NO -->
+          <section class="erp-panel" id="view-empleados">
+            <div class="erp-toolbar">
+              <div class="erp-filters">
+                <label>
+                  <span>Buscar Trabajador</span>
+                  <input type="search" id="emp-search" placeholder="Nombre, puesto, cuenta o DNI..." />
+                </label>
+              </div>
+              <div class="erp-actions">
+                <button type="button" class="btn-excel" id="emp-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="emp-pdf">Exportar PDF</button>
+                <a class="primary-action" href="./empleado.html">+ Registrar Trabajador</a>
+              </div>
+            </div>
+
+            <form class="erp-panel" id="emp-payroll-form" hidden style="background:#f8fafc">
+              <h3 id="emp-payroll-form-title" style="margin:0 0 12px;font-size:15px">Configurar Salario, Cuenta y N&oacute;mina al Correo</h3>
+              <input type="hidden" id="emp-edit-id" />
+              <div class="erp-form-grid">
+                <label>
+                  <span>Salario Base</span>
+                  <input type="number" id="emp-edit-salary" step="0.01" min="0" required />
+                </label>
+                <label>
+                  <span>Periodicidad</span>
+                  <select id="emp-edit-freq">
+                    <option value="Semanal">Semanal</option>
+                    <option value="Quincenal">Quincenal</option>
+                    <option value="Mensual">Mensual</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Cuenta Bancaria</span>
+                  <input type="text" id="emp-edit-account" placeholder="Ej. 2000-1458-9921" />
+                </label>
+                <label>
+                  <span>N&oacute;mina al Correo [SI / NO]</span>
+                  <select id="emp-edit-email-flag">
+                    <option value="SI">SI - Enviar recibo al correo</option>
+                    <option value="NO">NO - No enviar por correo</option>
+                  </select>
+                </label>
+              </div>
+              <div class="erp-actions">
+                <button type="submit" class="primary-action">Guardar Par&aacute;metros de N&oacute;mina</button>
+                <button type="button" class="secondary-action" id="emp-edit-cancel">Cancelar</button>
+              </div>
+            </form>
+
+            <div class="coi-boxed-table-wrap">
+              <table class="coi-boxed-table" id="noi-emp-table">
+                <thead>
+                  <tr>
+                    <th>N&deg;</th>
+                    <th>Datos Personales (Trabajador / Correo)</th>
+                    <th>Documentos / Puesto</th>
+                    <th>Cuenta Bancaria</th>
+                    <th class="num-col">Salario Base</th>
+                    <th>Periodicidad</th>
+                    <th>N&oacute;mina al Correo [SI/NO]</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="noi-emp-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- VISTA 2: CONCEPTOS PARA LA NOMINA (P -> Prestacion 1-50 P001, P002 / D -> Deduccion 1-50 D001, D002) -->
+          <section class="erp-panel" id="view-conceptos" hidden>
+            <div class="erp-toolbar">
+              <form class="erp-filters" id="concept-form">
+                <label>
+                  <span>Tipo (P / D)</span>
+                  <select id="con-type">
+                    <option value="P">P &rarr; Prestaci&oacute;n / Percepci&oacute;n (P001 - P050)</option>
+                    <option value="D">D &rarr; Deducci&oacute;n (D001 - D050)</option>
+                  </select>
+                </label>
+                <label>
+                  <span>N&uacute;mero (1 - 50)</span>
+                  <input type="number" id="con-number" min="1" max="50" value="1" required style="min-width:110px" />
+                </label>
+                <label>
+                  <span>Clave Generada</span>
+                  <input type="text" id="con-key-preview" value="P001" readonly style="min-width:100px;background:#f3f4f6;font-weight:700" />
+                </label>
+                <label>
+                  <span>Descripci&oacute;n del Concepto *</span>
+                  <input type="text" id="con-desc" placeholder="Ej. Sueldo Ordinario, Bono, IHSS, ISR..." required />
+                </label>
+                <label>
+                  <span>Integra Salario</span>
+                  <select id="con-integrates">
+                    <option value="Si">S&iacute;</option>
+                    <option value="No">No</option>
+                  </select>
+                </label>
+                <button type="submit" class="primary-action">+ Guardar Concepto</button>
+              </form>
+              <div class="erp-actions">
+                <button type="button" class="btn-excel" id="concepts-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="concepts-pdf">Exportar PDF</button>
+              </div>
+            </div>
+
+            <div class="coi-boxed-table-wrap">
+              <table class="coi-boxed-table" id="concepts-table">
+                <thead>
+                  <tr>
+                    <th>Clave</th>
+                    <th>Tipo (P / D)</th>
+                    <th>Descripci&oacute;n</th>
+                    <th>Integra Salario</th>
+                    <th class="num-col">Acumulado General</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="concepts-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- VISTA 3: CAPTURA Y REPORTE DE NOMINA (N° | Empleado | Cuenta + Datos del trabajador | Importe) -->
+          <section class="erp-panel" id="view-nominas" hidden>
+            <div id="payroll-closed-alert" class="closed-banner" hidden>
+              <span>Este periodo de n&oacute;mina est&aacute; CERRADO. No se permiten m&aacute;s registros ni modificaciones en este periodo.</span>
+            </div>
+
+            <div class="erp-toolbar">
+              <div class="erp-filters">
+                <label>
+                  <span>Periodo de N&oacute;mina</span>
+                  <input type="month" id="pay-filter-period" value="2026-01" />
+                </label>
+              </div>
+              <div class="erp-actions">
+                <button type="button" class="btn-excel" id="receipts-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="receipts-pdf">Exportar PDF</button>
+                <button type="button" class="primary-action" id="btn-new-receipt">+ Registrar N&oacute;mina a Trabajador</button>
+              </div>
+            </div>
+
+            <!-- Formulario para registrar recibo de nomina -->
+            <form class="erp-panel" id="receipt-form" hidden style="background:#f8fafc">
+              <h3 style="margin:0 0 12px;font-size:15px">Emitir Recibo de N&oacute;mina</h3>
+              <div class="erp-form-grid">
+                <label>
+                  <span>Trabajador *</span>
+                  <select id="rec-employee" required></select>
+                </label>
+                <label>
+                  <span>Periodo *</span>
+                  <input type="month" id="rec-period" value="2026-01" required />
+                </label>
+                <label>
+                  <span>Periodicidad</span>
+                  <select id="rec-frequency">
+                    <option value="Semanal">Semanal</option>
+                    <option value="Quincenal" selected>Quincenal</option>
+                    <option value="Mensual">Mensual</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Fecha de Pago *</span>
+                  <input type="date" id="rec-date" required />
+                </label>
+                <label>
+                  <span>Cuenta Bancaria del Trabajador</span>
+                  <input type="text" id="rec-account" placeholder="Cuenta de dispersion" />
+                </label>
+                <label>
+                  <span>Salario Base (P001)</span>
+                  <input type="number" id="rec-base-salary" step="0.01" min="0" value="0.00" />
+                </label>
+              </div>
+
+              <p style="font-size:12px;color:#4b5563;margin:6px 0">Agrega percepciones adicionales (P002..P050) o deducciones (D001..D050):</p>
+              <datalist id="payroll-concepts-datalist"></datalist>
+              <table class="policy-lines-table">
+                <thead>
+                  <tr>
+                    <th style="width:150px">Clave (P001 / D001)</th>
+                    <th style="width:160px">Tipo</th>
+                    <th>Descripci&oacute;n</th>
+                    <th style="width:160px" class="num-col">Importe</th>
+                    <th style="width:70px">Quitar</th>
+                  </tr>
+                </thead>
+                <tbody id="rec-lines-tbody"></tbody>
+              </table>
+
+              <div class="erp-actions" style="justify-content:space-between;margin-top:10px">
+                <button type="button" class="secondary-action" id="rec-add-line">+ Agregar Concepto (P / D)</button>
+                <div class="erp-actions">
+                  <button type="submit" class="primary-action">Guardar N&oacute;mina y Enviar Recibo</button>
+                  <button type="button" class="secondary-action" id="rec-cancel">Cancelar</button>
+                </div>
+              </div>
+            </form>
+
+            <!-- Reporte de Nomina con las columnas exactas del esquema: N° | Empleado | Cuenta (y Datos del trabajador) | Importe -->
+            <h3 style="margin:6px 0 10px;font-size:15px;color:#1e3a8a">Reporte de N&oacute;mina</h3>
+            <div class="coi-boxed-table-wrap">
+              <table class="coi-boxed-table" id="receipts-table">
+                <thead>
+                  <tr>
+                    <th style="width:60px">N&deg;</th>
+                    <th>Empleado</th>
+                    <th>Cuenta &rarr; Datos del Trabajador</th>
+                    <th class="num-col">Percepciones (P)</th>
+                    <th class="num-col">Deducciones (D)</th>
+                    <th class="num-col">Importe Neto</th>
+                    <th>Correo [SI/NO]</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="receipts-tbody"></tbody>
+                <tfoot id="receipts-tfoot"></tfoot>
+              </table>
+            </div>
+          </section>
+
+          <!-- VISTA 4: REPORTE DE ACUMULADOS -> PERIODO DE TIEMPO -->
+          <section class="erp-panel" id="view-acumulados" hidden>
+            <div class="erp-toolbar">
+              <div class="erp-filters">
+                <label>
+                  <span>Periodo Desde</span>
+                  <input type="month" id="acc-from" value="2026-01" />
+                </label>
+                <label>
+                  <span>Periodo Hasta</span>
+                  <input type="month" id="acc-to" value="2026-12" />
+                </label>
+                <button type="button" class="primary-action" id="acc-query">Consultar Acumulados</button>
+              </div>
+              <div class="erp-actions">
+                <button type="button" class="btn-excel" id="accum-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="accum-pdf">Exportar PDF</button>
+              </div>
+            </div>
+
+            <h3 style="margin:4px 0 10px;font-size:15px;color:#1e3a8a">Acumulados por Concepto (Prestaciones P y Deducciones D)</h3>
+            <div class="coi-boxed-table-wrap" style="margin-bottom:18px">
+              <table class="coi-boxed-table" id="accum-concepts-table">
+                <thead>
+                  <tr>
+                    <th>Clave</th>
+                    <th>Tipo</th>
+                    <th>Descripci&oacute;n</th>
+                    <th class="num-col">Recibos Emitidos</th>
+                    <th class="num-col">Importe Acumulado</th>
+                  </tr>
+                </thead>
+                <tbody id="accum-concepts-tbody"></tbody>
+              </table>
+            </div>
+
+            <h3 style="margin:4px 0 10px;font-size:15px;color:#1e3a8a">Acumulados por Trabajador en el Periodo</h3>
+            <div class="coi-boxed-table-wrap">
+              <table class="coi-boxed-table" id="accum-emp-table">
+                <thead>
+                  <tr>
+                    <th>N&deg;</th>
+                    <th>Empleado</th>
+                    <th>Puesto</th>
+                    <th>Cuenta</th>
+                    <th class="num-col">Percepciones Acum.</th>
+                    <th class="num-col">Deducciones Acum.</th>
+                    <th class="num-col">Importe Neto Acum.</th>
+                  </tr>
+                </thead>
+                <tbody id="accum-emp-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- VISTA 5: CIERRE -> NO PERMITIR MAS NOMINAS -->
+          <section class="erp-panel" id="view-cierre" hidden>
+            <div class="erp-toolbar">
+              <form class="erp-filters" id="closure-form">
+                <label>
+                  <span>Periodo a Cerrar *</span>
+                  <input type="month" id="close-period" value="2026-01" required />
+                </label>
+                <label style="min-width:260px">
+                  <span>Motivo / Observaci&oacute;n de Cierre</span>
+                  <input type="text" id="close-notes" placeholder="Ej. Cierre definitivo de nomina mensual" />
+                </label>
+                <button type="submit" class="primary-action">Ejecutar Cierre (No permitir m&aacute;s n&oacute;minas)</button>
+              </form>
+              <div class="erp-actions">
+                <button type="button" class="btn-excel" id="closures-excel">Exportar Excel (.xlsx)</button>
+                <button type="button" class="btn-pdf" id="closures-pdf">Exportar PDF</button>
+              </div>
+            </div>
+
+            <div class="coi-boxed-table-wrap">
+              <table class="coi-boxed-table" id="closures-table">
+                <thead>
+                  <tr>
+                    <th>Periodo Cerrado</th>
+                    <th>Estado</th>
+                    <th>Observaci&oacute;n</th>
+                    <th>Fecha y Hora de Cierre</th>
+                  </tr>
+                </thead>
+                <tbody id="closures-tbody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+    <script src="./assets/js/user-db.js"></script>
+    <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/export-utils.js"></script>
+    <script src="./assets/js/nomina.js"></script>
+  </body>
+</html>

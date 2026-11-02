@@ -1,0 +1,387 @@
+/* Estilos para Contabilidad (Aspel COI 9.0) y Nomina (Aspel NOI 11.00.20) */
+.coi-flow-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.coi-flow-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  margin-right: 6px;
+}
+
+.coi-flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #1f2937;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.coi-flow-step:hover {
+  border-color: #2563eb;
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.coi-flow-step.active {
+  background: #1e3a8a;
+  border-color: #1e3a8a;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.coi-flow-arrow {
+  color: #9ca3af;
+  font-weight: 600;
+  font-size: 13px;
+  user-select: none;
+}
+
+.erp-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.erp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.erp-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.erp-filters label,
+.erp-form-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.erp-filters input,
+.erp-filters select,
+.erp-form-grid input,
+.erp-form-grid select,
+.erp-form-grid textarea {
+  height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #111827;
+  background: #ffffff;
+  min-width: 150px;
+}
+
+.erp-form-grid textarea {
+  height: auto;
+  min-height: 64px;
+}
+
+.erp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-excel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 8px;
+  border: 1px solid #16a34a;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-excel:hover {
+  background: #dcfce7;
+}
+
+.btn-pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 8px;
+  border: 1px solid #dc2626;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-pdf:hover {
+  background: #fee2e2;
+}
+
+/* Tabla con bordes definidos estilo Aspel COI / NOI (dibujo del usuario) */
+.coi-boxed-table-wrap {
+  overflow-x: auto;
+  border: 1.5px solid #1f2937;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.coi-boxed-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.coi-boxed-table th {
+  background: #f3f4f6;
+  color: #111827;
+  font-weight: 700;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1.5px solid #1f2937;
+  border-right: 1px solid #374151;
+  white-space: nowrap;
+}
+
+.coi-boxed-table th:last-child,
+.coi-boxed-table td:last-child {
+  border-right: none;
+}
+
+.coi-boxed-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #d1d5db;
+  border-right: 1px solid #d1d5db;
+  color: #1f2937;
+  vertical-align: middle;
+}
+
+.coi-boxed-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.coi-boxed-table tfoot td {
+  background: #eef2ff;
+  font-weight: 700;
+  border-top: 1.5px solid #1f2937;
+  color: #1e3a8a;
+}
+
+.num-col {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.code-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.policy-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.policy-badge.type-CO { background: #fef3c7; color: #92400e; }
+.policy-badge.type-DI { background: #e0e7ff; color: #1e40af; }
+.policy-badge.type-EG { background: #fee2e2; color: #991b1b; }
+.policy-badge.type-IG { background: #dcfce7; color: #166534; }
+.policy-badge.type-VT { background: #f3e8ff; color: #6b21a8; }
+
+.erp-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.policy-lines-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  font-size: 12.5px;
+}
+
+.policy-lines-table th,
+.policy-lines-table td {
+  border: 1px solid #d1d5db;
+  padding: 6px 8px;
+}
+
+.policy-lines-table th {
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+.policy-lines-table input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12.5px;
+}
+
+.balance-Diff-ok {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.balance-Diff-err {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.aux-account-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.aux-account-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #cbd5e1;
+  font-size: 13px;
+}
+
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.kpi-box {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.kpi-box span {
+  display: block;
+  font-size: 11.5px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.kpi-box strong {
+  font-size: 18px;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+.mini-btn {
+  padding: 4px 9px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #1f2937;
+  cursor: pointer;
+  margin-right: 4px;
+}
+
+.mini-btn:hover {
+  background: #f3f4f6;
+}
+
+.mini-btn.danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.mini-btn.danger:hover {
+  background: #fef2f2;
+}
+
+.closed-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.yes-no-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border: 1.5px solid #1f2937;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11.5px;
+}
+
+.yes-no-pill.yes {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.yes-no-pill.no {
+  background: #f3f4f6;
+  color: #4b5563;
+}

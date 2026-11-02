@@ -293,4 +293,14 @@ catalogForm.addEventListener("submit", async (event) => {
   }
 });
 
+document.querySelector("#catalog-export-excel")?.addEventListener("click", () => {
+  const columns = ["Nombre", "Descripcion tecnica", "No. de serie", "Estatus"];
+  const rows = (catalogData[activeCatalog]?.rows || []).map((r) => [r.name, r.description, r.serial || "-", r.status]);
+  window.gestionExport?.toExcel({ filename: `catalogo-${activeCatalog}`, sheetName: activeCatalog, title: `Catalogo Maestro: ${activeCatalog}`, columns, rows });
+});
+document.querySelector("#catalog-export-pdf")?.addEventListener("click", () => {
+  const columns = ["Nombre", "Descripcion tecnica", "No. de serie", "Estatus"];
+  const rows = (catalogData[activeCatalog]?.rows || []).map((r) => [r.name, r.description, r.serial || "-", r.status]);
+  window.gestionExport?.toPdf({ filename: `catalogo-${activeCatalog}`, title: `Catalogo Maestro: ${activeCatalog}`, columns, rows });
+});
 setCatalog(activeCatalog);

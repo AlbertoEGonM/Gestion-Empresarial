@@ -131,6 +131,10 @@ function populateEmployee(employee) {
     position: employee.position,
     branch: employee.branch,
     systemRole: employee.systemRole,
+    baseSalary: Number(employee.baseSalary || 0).toFixed(2),
+    paymentFrequency: employee.paymentFrequency || "Quincenal",
+    bankAccount: employee.bankAccount || "",
+    payrollEmailEnabled: employee.payrollEmailEnabled === false ? "NO" : "SI",
   }).forEach(([name, value]) => {
     const field = employeeForm.elements.namedItem(name);
     if (field) field.value = value || "";

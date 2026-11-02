@@ -127,6 +127,16 @@ function exportAuditCsv() {
 auditSearch.addEventListener("input", renderAuditLogs);
 auditSeverity.addEventListener("change", renderAuditLogs);
 exportCsvButton.addEventListener("click", exportAuditCsv);
+document.querySelector("#audit-export-excel")?.addEventListener("click", () => {
+  const columns = ["ID", "Evento", "Modulo", "Usuario", "Empresa", "Fecha", "Nivel", "IP"];
+  const rows = filteredAuditLogs().map((log) => { const [d, m] = describeAuditEvent(log); return [log.id, d, m, log.username, log.companyName, formatDate(log.createdAt), log.severity, log.ipAddress]; });
+  window.gestionExport?.toExcel({ filename: "bitacora-auditoria", sheetName: "Bitacora", title: "Bitacora de Actividad y Seguridad", columns, rows });
+});
+document.querySelector("#audit-export-pdf")?.addEventListener("click", () => {
+  const columns = ["ID", "Evento", "Modulo", "Usuario", "Empresa", "Fecha", "Nivel", "IP"];
+  const rows = filteredAuditLogs().map((log) => { const [d, m] = describeAuditEvent(log); return [log.id, d, m, log.username, log.companyName, formatDate(log.createdAt), log.severity, log.ipAddress]; });
+  window.gestionExport?.toPdf({ filename: "bitacora-auditoria", title: "Bitacora de Actividad y Seguridad", columns, rows });
+});
 
 (async function loadAuditLogs() {
   try {

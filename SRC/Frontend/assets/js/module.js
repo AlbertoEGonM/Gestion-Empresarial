@@ -112,6 +112,17 @@ let editIndex = null;
 let posCart = [];
 let posTaxName = activeUser().countryCode === "MX" ? "IVA" : "ISV";
 let posTaxRate = Number(activeUser().taxRate ?? (activeUser().countryCode === "MX" ? 16 : 15));
+let posPriceListIndex = 0;
+const PRICE_LIST_NAMES = ["1. Precio Publico", "2. Precio Mayoreo", "3. Precio Distribuidor", "4. Precio Especial 1", "5. Precio Especial 2"];
+
+function formatWeightConversion(qtyValue, unitValue) {
+  const qty = numericValue(qtyValue);
+  const u = String(unitValue || "").toLowerCase();
+  if (!qty) return "";
+  if (u.includes("kilo") || u === "kg") return ` (${(qty * 2.20462).toFixed(2)} lb)`;
+  if (u.includes("libra") || u === "lb") return ` (${(qty * 0.453592).toFixed(2)} kg)`;
+  return "";
+}
 
 function rowsStorageKey(moduleKey, viewKey) {
   return `${STORAGE_PREFIX}-c${activeCompanyId()}-${moduleKey}-${viewKey}-rows`;
@@ -516,7 +527,8 @@ function renderTable() {
       const serialIndex = alignedRow.length - 1;
       const cells = alignedRow
         .map((cell, cellIndex) => {
-          const renderedText = escapeHtml(localizeBusinessText(cell));
+          const weightNote = currentKey === "inventarios" && currentViewKey === "productos" && cellIndex === 4 ? escapeHtml(formatWeightConversion(cell, alignedRow[3])) : "";
+          const renderedText = escapeHtml(localizeBusinessText(cell)) + weightNote;
           if (cellIndex === statusIndex) {
             return `<span><b class="status ${statusClass(cell)}">${renderedText}</b></span>`;
           }
@@ -606,7 +618,7 @@ function renderReports() {
       ([title, description], index) =>
         `<article class="report-card"><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p><div><small>CSV consolidado (${escapeHtml(
           activeUser().company || "Empresa activa"
-        )})</small><button type="button" data-report="${index}">Descargar CSV</button></div></article>`
+        )})</small><div style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" data-report-excel="${index}">Excel (.xlsx)</button><button type="button" data-report-pdf="${index}">PDF</button><button type="button" data-report="${index}">CSV</button></div></div></article>`
     )
     .join("")}</div>`;
 }
@@ -644,14 +656,22 @@ function renderGuides() {
 function getPosProducts() {
   const inventoryRows = moduleRows("inventarios", "productos");
   if (!inventoryRows.length) return [];
+  const priceRows = moduleRows("inventarios", "precios");
   return inventoryRows
     .filter((row) => !/inactivo/i.test(String(row[6] || "")))
     .map((row) => ({
       id: String(row[0] || "TELA-0001"),
       name: String(row[1] || "Tela comercial"),
-      stock: `${row[4] || "0"} ${String(row[3] || "m").toLowerCase()}`,
-      price: Math.max(0.01, numericValue(row[5]) || 1),
-      unit: String(row[3] || "Metro").toLowerCase().startsWith("rollo") ? "rollo" : "m",
+      stock: `${row[4] || "0"} ${String(row[3] || "m").toLowerCase()}${formatWeightConversion(row[4], row[3])}`,
+      price: (() => {
+        const base = Math.max(0.01, numericValue(row[5]) || 1);
+        const match = priceRows.find((p) => String(p[0]).trim() === String(row[0]).trim() || String(p[1]).trim() === String(row[1]).trim());
+        const tiers = match
+          ? [numericValue(match[2]) || base, numericValue(match[3]) || base * 0.92, numericValue(match[4]) || base * 0.85, numericValue(match[5]) || base * 0.8, numericValue(match[6]) || base * 0.75]
+          : [base, base * 0.92, base * 0.85, base * 0.8, base * 0.75];
+        return Math.round((tiers[posPriceListIndex] || base) * 100) / 100;
+      })(),
+      unit: String(row[3] || "Metro").toLowerCase().includes("kilo") ? "kg" : String(row[3] || "Metro").toLowerCase().includes("libra") ? "lb" : String(row[3] || "Metro").toLowerCase().startsWith("rollo") ? "rollo" : "m",
     }));
 }
 
@@ -698,6 +718,8 @@ function renderPos() {
     <label class="pos-field"><span>Cliente</span><select id="pos-client-select">${clientNames
       .map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`)
       .join("")}</select></label>
+    <label class="pos-field"><span>Lista de precio (5 listas)</span><select id="pos-price-list-select">${PRICE_LIST_NAMES.map((lbl, idx) => `<option value="${idx}"${idx === posPriceListIndex ? " selected" : ""}>${escapeHtml(lbl)}</option>`).join("")}</select></label>
+    <label class="pos-field"><span>Esquema de impuestos</span><select id="pos-tax-scheme-select"><option value="ISV:15">ISV General (15%)</option><option value="ISV:18">ISV Especial (18%)</option><option value="IVA:16">IVA General (16%)</option><option value="Exento:0">Exento (0%)</option>${moduleRows("inventarios", "impuestos").map((t) => `<option value="${escapeHtml(t[1] || "Impuesto")}:${numericValue(t[2]) + numericValue(t[3])}">${escapeHtml(t[0])} - ${escapeHtml(t[1])} (${numericValue(t[2]) + numericValue(t[3])}%)</option>`).join("")}</select></label>
     <div class="pos-cart-items">${
       posCart.length
         ? posCart
@@ -746,6 +768,21 @@ function renderPos() {
   };
   taxNameInput.addEventListener("input", updateTax);
   taxRateInput.addEventListener("input", updateTax);
+  document.querySelector("#pos-price-list-select")?.addEventListener("change", (e) => {
+    posPriceListIndex = Number(e.target.value || 0);
+    const updatedProducts = getPosProducts();
+    posCart = posCart.map((c) => {
+      const found = updatedProducts.find((p) => p.id === c.id);
+      return found ? { ...c, price: found.price } : c;
+    });
+    renderPos();
+  });
+  document.querySelector("#pos-tax-scheme-select")?.addEventListener("change", (e) => {
+    const [schemeName, schemeRate] = String(e.target.value || "ISV:15").split(":");
+    taxNameInput.value = schemeName || "ISV";
+    taxRateInput.value = String(Number(schemeRate || 0));
+    updateTax();
+  });
 }
 
 async function handlePosAction(button) {
@@ -1010,7 +1047,52 @@ async function runWorkflow(index) {
   }
 }
 
+function exportCurrentView(format = "excel") {
+  const dataRows = filteredRows().map(({ row }) => row.map((c) => localizeBusinessText(c)));
+  const headers = [...(currentView.columns || [])];
+  if (headers.at(-1) === "Acciones") {
+    headers.splice(-1, 0, "No. de serie");
+    headers.pop();
+  }
+  const title = `${currentModule.title} - ${currentView.label}`;
+  const fname = `${currentKey}-${currentViewKey}`;
+  if (format === "pdf") {
+    window.gestionExport?.toPdf({ filename: fname, title, columns: headers, rows: dataRows });
+  } else {
+    window.gestionExport?.toExcel({ filename: fname, sheetName: currentView.label, title, columns: headers, rows: dataRows });
+  }
+}
+
+function exportReportFormat(index = 0, format = "excel") {
+  const reportSources = [
+    ["ventas", "facturas"],
+    ["inventarios", "productos"],
+    ["compras", "ordenes"],
+    ["costos", "hojas"],
+    ["ventas", "cobranza"],
+    ["contabilidad", "movimientos"],
+  ];
+  const [targetModule, targetView] = reportSources[index] || ["ventas", "facturas"];
+  const viewDef = modules[targetModule]?.views?.[targetView] || currentView;
+  const datasetRows = moduleRows(targetModule, targetView).map((r) => r.map((c) => localizeBusinessText(c)));
+  const headers = [...(viewDef.columns || ["Columna"])];
+  if (headers.at(-1) === "Acciones") {
+    headers.splice(-1, 0, "No. de serie");
+    headers.pop();
+  }
+  const title = reports[index]?.[0] || viewDef.label;
+  if (format === "pdf") {
+    window.gestionExport?.toPdf({ filename: title, title, columns: headers, rows: datasetRows });
+  } else {
+    window.gestionExport?.toExcel({ filename: title, sheetName: title, title, columns: headers, rows: datasetRows });
+  }
+}
+
 function exportInventory() {
+  return exportCurrentView("excel");
+}
+
+function exportInventoryLegacy() {
   const dataRows = filteredRows().map(({ row }) => row);
   const headers = [...currentView.columns];
   headers.splice(-1, 0, "No. de serie");
@@ -1117,13 +1199,20 @@ function initializePage() {
   renderFilterOptions();
   renderTable();
   searchInput.addEventListener("input", renderTable);
+  searchInput.addEventListener("input", renderTable);
   filterInput.addEventListener("change", renderTable);
+  document.querySelector("#module-export-excel")?.addEventListener("click", () => exportCurrentView("excel"));
+  document.querySelector("#module-export-pdf")?.addEventListener("click", () => exportCurrentView("pdf"));
   syncDataset();
 }
 
 view.addEventListener("click", async (event) => {
   const posButton = event.target.closest("[data-pos]");
   if (posButton) return handlePosAction(posButton);
+  const reportExcelBtn = event.target.closest("[data-report-excel]");
+  if (reportExcelBtn) return exportReportFormat(Number(reportExcelBtn.dataset.reportExcel), "excel");
+  const reportPdfBtn = event.target.closest("[data-report-pdf]");
+  if (reportPdfBtn) return exportReportFormat(Number(reportPdfBtn.dataset.reportPdf), "pdf");
   const reportButton = event.target.closest("[data-report]");
   if (reportButton) return exportReport(Number(reportButton.dataset.report));
   const button = event.target.closest("[data-action]");
