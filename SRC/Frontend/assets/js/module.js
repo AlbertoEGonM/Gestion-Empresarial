@@ -119,8 +119,33 @@ function formatWeightConversion(qtyValue, unitValue) {
   const qty = numericValue(qtyValue);
   const u = String(unitValue || "").toLowerCase();
   if (!qty) return "";
-  if (u.includes("kilo") || u === "kg") return ` (${(qty * 2.20462).toFixed(2)} lb)`;
-  if (u.includes("libra") || u === "lb") return ` (${(qty * 0.453592).toFixed(2)} kg)`;
+  if (u.includes("libra") || u === "lb") return ` lb (${(qty * 0.453592).toFixed(2)} kg)`;
+  return ` kg (${(qty * 2.20462).toFixed(2)} lb)`;
+}
+
+function formatPriceConversion(priceValue, unitValue) {
+  const price = numericValue(priceValue);
+  if (!price) return "";
+  const isLb = String(unitValue || "").toLowerCase().includes("libra") || String(unitValue || "").toLowerCase() === "lb";
+  const otherPrice = isLb ? price * 2.20462 : price / 2.20462;
+  const otherUnit = isLb ? "kg" : "lb";
+  return ` (${currency(otherPrice, 2)}/${otherUnit})`;
+}
+
+function formatInlineWeightText(value) {
+  const str = String(value ?? "");
+  if (!str || /\(\d+(?:[.,]\d+)?\s*(?:kg|lb)\)/i.test(str)) return str;
+  const kgMatch = str.match(/^(\s*[+-]?\d+(?:[.,]\d+)?)\s*(?:kg|kilos?|kilogramos?)\b(.*)$/i);
+  if (kgMatch) {
+    const n = numericValue(kgMatch[1]);
+    return `${n.toFixed(2)} kg (${(n * 2.20462).toFixed(2)} lb)${kgMatch[2] || ""}`;
+  }
+  const lbMatch = str.match(/^(\s*[+-]?\d+(?:[.,]\d+)?)\s*(?:lb|lbs|libras?)\b(.*)$/i);
+  if (lbMatch) {
+    const n = numericValue(lbMatch[1]);
+    return `${n.toFixed(2)} lb (${(n * 0.453592).toFixed(2)} kg)${lbMatch[2] || ""}`;
+  }
+  return str;
   return "";
 }
 
@@ -135,7 +160,11 @@ function normalizeDatasetRows(moduleKey, viewKey, datasetRows) {
       if (row.length === 13) {
         return [row[0], row[1], row[3], row[5], row[6], row[7], row[11], row[12]];
       }
-      return row;
+      const normRow = row.length === 13 ? [row[0], row[1], row[3], row[5], row[6], row[7], row[11], row[12]] : [...row];
+      if (normRow.length >= 4) {
+        normRow[3] = String(normRow[3] || "").toLowerCase().includes("libra") || String(normRow[3] || "").toLowerCase() === "lb" ? "Libra (lb)" : "Kilogramo (kg)";
+      }
+      return normRow;
     });
   }
   return datasetRows;
@@ -299,12 +328,18 @@ function operationalMetrics(metricType) {
     const warehouses = moduleRows("inventarios", "almacenes").filter((row) => /activo/i.test(row[6]));
     const active = products.filter((row) => /activo/i.test(row[6]));
     const lowStock = products.filter((row) => /bajo minimo|existencia negativa/i.test(row[6]));
-    const stock = totalAt(products.filter((row) => !/inactivo/i.test(row[6])), 4);
+    const activeProducts = products.filter((row) => !/inactivo/i.test(row[6]));
+    const totalKg = activeProducts.reduce((sum, row) => {
+      const q = numericValue(row[4]);
+      const isLb = String(row[3] || "").toLowerCase().includes("libra");
+      return sum + (isLb ? q * 0.453592 : q);
+    }, 0);
+    const totalLb = totalKg * 2.20462;
     const negativeStock = products.filter((row) => numericValue(row[4]) < 0);
     const categories = new Set(active.map((row) => row[2]).filter(Boolean)).size;
     return [
       ["Productos activos", String(active.length), `${categories} categorias textiles`],
-      ["Existencia total", `${stock.toLocaleString(u.locale || "es-HN")} unid.`, `En ${warehouses.length} almacenes activos`],
+      ["Existencia total", `${totalKg.toLocaleString(u.locale || "es-HN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg`, `Equivale a ${totalLb.toLocaleString(u.locale || "es-HN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} lb (${warehouses.length} almacenes)`],
       ["Bajo minimo", String(lowStock.length), "Requieren abastecimiento"],
       ["Existencia negativa", String(negativeStock.length), negativeStock.length ? "Requiere regularizacion" : "Inventario regularizado"],
     ];
@@ -527,8 +562,11 @@ function renderTable() {
       const serialIndex = alignedRow.length - 1;
       const cells = alignedRow
         .map((cell, cellIndex) => {
-          const weightNote = currentKey === "inventarios" && currentViewKey === "productos" && cellIndex === 4 ? escapeHtml(formatWeightConversion(cell, alignedRow[3])) : "";
-          const renderedText = escapeHtml(localizeBusinessText(cell)) + weightNote;
+          const isInvProd = currentKey === "inventarios" && currentViewKey === "productos";
+          const weightNote = isInvProd && cellIndex === 4 ? escapeHtml(formatWeightConversion(cell, alignedRow[3])) : isInvProd && cellIndex === 5 ? escapeHtml(formatPriceConversion(cell, alignedRow[3])) : "";
+          const baseText = isInvProd ? localizeBusinessText(cell) : formatInlineWeightText(localizeBusinessText(cell));
+          const renderedText = escapeHtml(baseText) + weightNote;
+          // baseText + weightNote already in renderedText
           if (cellIndex === statusIndex) {
             return `<span><b class="status ${statusClass(cell)}">${renderedText}</b></span>`;
           }
@@ -662,7 +700,7 @@ function getPosProducts() {
     .map((row) => ({
       id: String(row[0] || "TELA-0001"),
       name: String(row[1] || "Tela comercial"),
-      stock: `${row[4] || "0"} ${String(row[3] || "m").toLowerCase()}${formatWeightConversion(row[4], row[3])}`,
+      stock: `${numericValue(row[4]).toFixed(2)}${formatWeightConversion(row[4], row[3])}`,
       price: (() => {
         const base = Math.max(0.01, numericValue(row[5]) || 1);
         const match = priceRows.find((p) => String(p[0]).trim() === String(row[0]).trim() || String(p[1]).trim() === String(row[1]).trim());
@@ -671,7 +709,7 @@ function getPosProducts() {
           : [base, base * 0.92, base * 0.85, base * 0.8, base * 0.75];
         return Math.round((tiers[posPriceListIndex] || base) * 100) / 100;
       })(),
-      unit: String(row[3] || "Metro").toLowerCase().includes("kilo") ? "kg" : String(row[3] || "Metro").toLowerCase().includes("libra") ? "lb" : String(row[3] || "Metro").toLowerCase().startsWith("rollo") ? "rollo" : "m",
+      unit: String(row[3] || "Kilogramo (kg)").toLowerCase().includes("libra") || String(row[3] || "").toLowerCase() === "lb" ? "lb" : "kg",
     }));
 }
 
@@ -710,7 +748,7 @@ function renderPos() {
   const tax = subtotal * (taxRate / 100);
   const total = subtotal + tax;
   view.innerHTML = `<div class="pos-layout"><section class="pos-products">
-    <div class="pos-section-heading"><div><h2>Catalogo de telas en mostrador</h2><p>Selecciona rollos o metros registrados en inventario para agregar a la venta.</p></div><label class="search-control pos-search"><img src="./assets/icons/inventory-search.svg" alt="" /><input id="pos-search" type="search" placeholder="Buscar tela o codigo..." /></label></div>
+    <div class="pos-section-heading"><div><h2>Catalogo de telas en mostrador (Kilos / Libras)</h2><p>Selecciona productos en Kilos (kg) o Libras (lb) con conversion automatica para agregar a la venta.</p></div><label class="search-control pos-search"><img src="./assets/icons/inventory-search.svg" alt="" /><input id="pos-search" type="search" placeholder="Buscar tela o codigo..." /></label></div>
     <div class="pos-product-grid" id="pos-product-grid">${renderPosProducts(availableProducts)}</div></section>
     <aside class="pos-cart"><div class="pos-cart-heading"><div><h2>Venta de mostrador</h2><p>${escapeHtml(
       activeUser().company || "Sucursal Principal"
@@ -727,7 +765,7 @@ function renderPos() {
               (item) =>
                 `<div class="pos-cart-row"><div><strong>${escapeHtml(item.name)}</strong><small>${money(item.price)} / ${escapeHtml(
                   item.unit
-                )}</small></div><div class="pos-quantity"><button type="button" data-pos="decrease" data-id="${escapeHtml(
+                )}</small><small style="display:block;color:#1e40af">${item.unit === "lb" ? `${(item.quantity * 0.453592).toFixed(2)} kg` : `${(item.quantity * 2.20462).toFixed(2)} lb`}</small></div><div class="pos-quantity"><button type="button" data-pos="toggle-unit" data-id="${escapeHtml(item.id)}" title="Convertir entre Kilos (kg) y Libras (lb)" style="font-size:0.74rem;padding:2px 6px;width:auto">${escapeHtml(item.unit.toUpperCase())} ⇄</button><button type="button" data-pos="decrease" data-id="${escapeHtml(
                   item.id
                 )}" aria-label="Reducir cantidad">-</button><span>${item.quantity}</span><button type="button" data-pos="increase" data-id="${escapeHtml(
                   item.id
@@ -736,7 +774,7 @@ function renderPos() {
             .join("")
         : '<div class="pos-empty"><strong>Sin telas en la orden</strong><span>Selecciona telas del catalogo izquierdo para iniciar el corte o venta.</span></div>'
     }</div>
-    <div class="pos-summary"><div><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
+    <div class="pos-summary"><div><span>Peso total</span><strong>${posCart.reduce((s, it) => s + (it.unit === "lb" ? it.quantity * 0.453592 : it.quantity), 0).toFixed(2)} kg (${posCart.reduce((s, it) => s + (it.unit === "lb" ? it.quantity : it.quantity * 2.20462), 0).toFixed(2)} lb)</strong></div><div><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
     <div class="pos-tax-editor"><label><span>Impuesto</span><input id="pos-tax-name" type="text" value="${escapeHtml(
       posTaxName
     )}" maxlength="30" placeholder="Impuesto" aria-label="Nombre del impuesto" /></label><label><span>Porcentaje</span><span class="pos-tax-rate"><input id="pos-tax-rate" type="number" value="${taxRate}" min="0" max="100" step="0.01" aria-label="Porcentaje del impuesto" /><b>%</b></span></label></div>
@@ -793,7 +831,18 @@ async function handlePosAction(button) {
   if (action === "add" && product) {
     cartItem ? (cartItem.quantity += 1) : posCart.push({ ...product, quantity: 1 });
   }
-  if (action === "increase" && cartItem) cartItem.quantity += 1;
+  if (action === "toggle-unit" && cartItem) {
+    if (cartItem.unit === "kg") {
+      cartItem.unit = "lb";
+      cartItem.quantity = Math.round(cartItem.quantity * 2.20462 * 100) / 100;
+      cartItem.price = Math.round((cartItem.price / 2.20462) * 100) / 100;
+    } else {
+      cartItem.unit = "kg";
+      cartItem.quantity = Math.round(cartItem.quantity * 0.453592 * 100) / 100;
+      cartItem.price = Math.round((cartItem.price * 2.20462) * 100) / 100;
+    }
+  }
+  if (action === "increase" && cartItem) cartItem.quantity = Math.round((cartItem.quantity + 1) * 100) / 100;
   if (action === "decrease" && cartItem) {
     cartItem.quantity -= 1;
     if (cartItem.quantity <= 0) posCart = posCart.filter((item) => item.id !== cartItem.id);
@@ -879,6 +928,36 @@ function buildForm(row = []) {
     formFields.insertAdjacentHTML(
       "beforeend",
       `<datalist id="sales-client-list">${clientNames.map((name) => `<option value="${escapeHtml(name)}"></option>`).join("")}</datalist>`
+    );
+  }
+  if (currentKey === "inventarios" && currentViewKey === "productos") {
+    formFields.insertAdjacentHTML("beforeend", '<div id="modal-weight-preview" style="grid-column:1/-1;padding:8px 12px;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:0.84rem;font-weight:600">Conversion base: 1.00 kg = 2.20 lb | 1.00 lb = 0.45 kg</div>');
+    const unitSel = formFields.querySelector('select[name="field-3"]');
+    const qtyInp = formFields.querySelector('input[name="field-4"]');
+    const priceInp = formFields.querySelector('input[name="field-5"]');
+    const previewEl = formFields.querySelector("#modal-weight-preview");
+    const refreshModalConversion = () => {
+      const q = numericValue(qtyInp?.value);
+      const p = numericValue(priceInp?.value);
+      const isLb = String(unitSel?.value || "").toLowerCase().includes("libra");
+      const kg = isLb ? q * 0.453592 : q;
+      const lb = isLb ? q : q * 2.20462;
+      const pKg = isLb ? p * 2.20462 : p;
+      const pLb = isLb ? p : p / 2.20462;
+      if (previewEl) {
+        previewEl.textContent = q > 0 || p > 0
+          ? `Conversion automatica: ${kg.toFixed(2)} kg = ${lb.toFixed(2)} lb  |  Precio: ${currency(pKg, 2)}/kg (${currency(pLb, 2)}/lb)`
+          : "Conversion base: 1.00 kg = 2.20 lb | 1.00 lb = 0.45 kg";
+      }
+    };
+    [unitSel, qtyInp, priceInp].forEach((el) => {
+      el?.addEventListener("input", refreshModalConversion);
+      el?.addEventListener("change", refreshModalConversion);
+    });
+    refreshModalConversion();
+  }
+  if (false) {
+    void (0
     );
   }
 }
@@ -1015,8 +1094,8 @@ async function runWorkflow(index) {
       row[0],
       row[1],
       "LOT-PENDIENTE",
-      "0 m",
-      "0 m",
+      "0.00 kg (0.00 lb)",
+      "0.00 kg (0.00 lb)",
       "Pendiente",
     ]);
     navigate("compras", "recepciones");
@@ -1027,7 +1106,7 @@ async function runWorkflow(index) {
     const { documentNumber } = await nextTargetDocument("ventas", "pedidos");
     const detail = String(row[2] || "");
     const quantity = detail.match(/[+-]?\d+(?:[.,]\d+)?/)?.[0] || "1";
-    const product = detail.replace(/^[+-]?\d+(?:[.,]\d+)?\s*(?:m|metros?|rollos?|piezas?)?\s*/i, "") || detail;
+    const product = detail.replace(/^[+-]?\d+(?:[.,]\d+)?\s*(?:kg|kilos?|kilogramos?|lb|lbs|libras?)?\s*/i, "") || detail;
     await appendTargetRow("ventas", "pedidos", [documentNumber, row[1], product, quantity, "Detalle", row[3], row[4], "Pendiente"]);
     navigate("ventas", "pedidos");
   } else if (type === "order-to-invoice") {
