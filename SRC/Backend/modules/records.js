@@ -1,42 +1,48 @@
 const pool = require("../config/connection");
-const { requireModuleAccess } = require("../config/permissions");
+const { listCompanies } = require("../config/db");
+const { requireModuleAccess, resolveTenantCompanyId } = require("../config/permissions");
+const { logSecurityEvent } = require("../config/audit");
+const {
+  assertAllowedFields,
+  parsePagination,
+  sanitizeText,
+  validateModuleAndView,
+} = require("../config/validator");
 
-const KEY_PATTERN = /^[a-z0-9_-]{2,40}$/;
-
-function validateKey(value, label) {
-  const key = String(value || "").trim().toLowerCase();
-  if (!KEY_PATTERN.test(key)) throw new Error(`${label} no es valido.`);
-  return key;
-}
-
-function resolveCompanyId(user, requestedCompanyId) {
-  const companyId = user.isGlobalAdmin && requestedCompanyId ? Number(requestedCompanyId) : Number(user.companyId);
-  if (!Number.isInteger(companyId) || companyId <= 0) throw new Error("La empresa seleccionada no es valida.");
-  return companyId;
-}
+let recordsTablePromise = null;
 
 async function assertActiveCompany(companyId) {
-  const [companies] = await pool.query("SELECT id FROM companies WHERE id = ? AND active = 1 LIMIT 1", [companyId]);
-  if (!companies.length) throw new Error("La empresa seleccionada no esta disponible.");
+  const companies = await listCompanies();
+  if (!companies.some((c) => Number(c.id) === Number(companyId))) {
+    throw new Error("La empresa seleccionada no esta disponible.");
+  }
 }
 
 async function ensureRecordsTable() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS business_datasets (
-    id BIGSERIAL PRIMARY KEY,
-    company_id INT NOT NULL,
-    module_key VARCHAR(40) NOT NULL,
-    view_key VARCHAR(40) NOT NULL,
-    rows_json TEXT NOT NULL,
-    updated_by INT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_business_dataset UNIQUE (company_id, module_key, view_key)
-  )`);
-  await pool.query(`CREATE TABLE IF NOT EXISTS business_serial_sequences (
-    company_id INT NOT NULL, module_key VARCHAR(40) NOT NULL, view_key VARCHAR(40) NOT NULL,
-    next_value BIGINT NOT NULL DEFAULT 1, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (company_id, module_key, view_key)
-  )`);
+  if (!recordsTablePromise) {
+    recordsTablePromise = (async () => {
+      await pool.query(`CREATE TABLE IF NOT EXISTS business_datasets (
+        id BIGSERIAL PRIMARY KEY,
+        company_id INT NOT NULL,
+        module_key VARCHAR(40) NOT NULL,
+        view_key VARCHAR(40) NOT NULL,
+        rows_json TEXT NOT NULL,
+        updated_by INT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT uq_business_dataset UNIQUE (company_id, module_key, view_key)
+      )`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS business_serial_sequences (
+        company_id INT NOT NULL, module_key VARCHAR(40) NOT NULL, view_key VARCHAR(40) NOT NULL,
+        next_value BIGINT NOT NULL DEFAULT 1, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (company_id, module_key, view_key)
+      )`);
+    })().catch((error) => {
+      recordsTablePromise = null;
+      throw error;
+    });
+  }
+  return recordsTablePromise;
 }
 
 function serialPrefix(moduleKey, viewKey) {
@@ -62,10 +68,14 @@ async function assignSerialNumbers(connection, companyId, moduleKey, viewKey, ro
     const values = [...row];
     const candidate = String(values.at(-1) || "");
     if (new RegExp(`^${prefix}\\d{6,}$`).test(candidate) && !used.has(candidate)) {
-      used.add(candidate);
       const value = Number(candidate.slice(prefix.length));
-      if (Number.isSafeInteger(value)) nextValue = Math.max(nextValue, value + 1);
-      return values;
+      // Punto 8: Bloquear inyeccion de folios SER-* falsos mayores al contador oficial del servidor
+      if (Number.isSafeInteger(value) && value > 0 && value < nextValue + rows.length + 10) {
+        used.add(candidate);
+        nextValue = Math.max(nextValue, value + 1);
+        return values;
+      }
+      values.pop();
     }
     const serial = `${prefix}${String(nextValue).padStart(6, "0")}`;
     nextValue += 1;
@@ -82,13 +92,15 @@ async function assignSerialNumbers(connection, companyId, moduleKey, viewKey, ro
   return numberedRows;
 }
 
-async function getDataset(user, query) {
+const SHARED_CATALOG_VIEWS = new Set(["categorias", "unidades", "colores"]);
+
+async function getDataset(user, query = {}) {
   await ensureRecordsTable();
-  const moduleKey = validateKey(query.module, "El modulo");
-  requireModuleAccess(user, moduleKey);
-  const viewKey = validateKey(query.view, "La vista");
-  const companyId = resolveCompanyId(user, query.companyId);
+  const { moduleKey, viewKey } = validateModuleAndView(query.module, query.view);
+  requireModuleAccess(user, moduleKey, SHARED_CATALOG_VIEWS.has(viewKey) ? null : viewKey);
+  const companyId = resolveTenantCompanyId(user, query.companyId);
   await assertActiveCompany(companyId);
+  const { limit, offset } = parsePagination(query, 500, 1000);
   const [rows] = await pool.query(
     "SELECT rows_json, updated_at FROM business_datasets WHERE company_id = ? AND module_key = ? AND view_key = ? LIMIT 1",
     [companyId, moduleKey, viewKey]
@@ -96,22 +108,31 @@ async function getDataset(user, query) {
   if (!rows.length) return { initialized: false, rows: [], companyId };
   let data = [];
   try { data = JSON.parse(rows[0].rows_json); } catch (error) { data = []; }
-  return { initialized: true, rows: Array.isArray(data) ? data : [], companyId, updatedAt: rows[0].updated_at };
+  const allRows = Array.isArray(data) ? data : [];
+  return {
+    initialized: true,
+    rows: allRows.slice(offset, offset + limit),
+    totalRows: allRows.length,
+    companyId,
+    updatedAt: rows[0].updated_at,
+  };
 }
 
-async function saveDataset(user, body) {
+async function saveDataset(user, body = {}) {
   await ensureRecordsTable();
-  const moduleKey = validateKey(body.moduleKey, "El modulo");
-  requireModuleAccess(user, moduleKey);
-  const viewKey = validateKey(body.viewKey, "La vista");
-  const companyId = resolveCompanyId(user, body.companyId);
+  assertAllowedFields(body, ["moduleKey", "viewKey", "rows", "companyId"], "guardado de registros");
+  const { moduleKey, viewKey } = validateModuleAndView(body.moduleKey, body.viewKey);
+  requireModuleAccess(user, moduleKey, SHARED_CATALOG_VIEWS.has(viewKey) ? null : viewKey);
+  const companyId = resolveTenantCompanyId(user, body.companyId);
   await assertActiveCompany(companyId);
-  if (!Array.isArray(body.rows) || body.rows.length > 2000) throw new Error("El conjunto de registros no es valido.");
+  if (!Array.isArray(body.rows) || body.rows.length > 500) {
+    throw new Error("El conjunto de registros no es valido o excede el limite permitido (500 filas).");
+  }
   const submittedRows = body.rows.map((row) => {
     if (!Array.isArray(row) || row.length > 30) throw new Error("Uno de los registros no tiene el formato esperado.");
-    return row.map((value) => String(value ?? "").slice(0, 500));
+    return row.map((value) => sanitizeText(value ?? "", 500));
   });
-  const connection = await pool.getConnection();
+  const connection = await pool.getConnection(user);
   let rows;
   try {
     await connection.beginTransaction();
@@ -130,6 +151,13 @@ async function saveDataset(user, body) {
   } finally {
     connection.release();
   }
+  await logSecurityEvent({
+    companyId,
+    userId: user.id,
+    action: "DATASET_UPDATED",
+    severity: "INFO",
+    details: { moduleKey, viewKey, totalRows: rows.length, username: user.username },
+  });
   return { saved: true, companyId, rows };
 }
 

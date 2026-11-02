@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=7" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
   </head>
   <body>
     <main class="auth-page" data-node-id="1:430">
@@ -20,6 +20,11 @@
         </header>
 
         <form class="signup-form" id="signup-form" data-redirect="./login.html">
+          <div class="hp-trap" aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;opacity:0;pointer-events:none">
+            <label for="website_url">Sitio web corporativo</label>
+            <input id="website_url" name="website_url" type="text" tabindex="-1" autocomplete="off" />
+          </div>
+
           <div class="field">
             <label for="firstName">Nombre:</label>
             <input id="firstName" name="firstName" type="text" placeholder="Escribe tu nombre" autocomplete="given-name" minlength="2" maxlength="80" required />

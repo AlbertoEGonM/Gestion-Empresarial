@@ -19,11 +19,11 @@
           <a href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
-          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
           <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
         </nav>
         <div class="user-box">
-          <div class="avatar">U</div><div><strong>usuario</strong><span>Rol</span></div>
+          <div class="avatar">--</div><div><strong>Usuario</strong><span>Sesion activa</span></div>
           <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
         </div>
       </aside>
@@ -31,10 +31,10 @@
       <section class="workspace">
         <header class="topbar">
           <div class="breadcrumbs"><a href="./dashboard.html">Inicio</a><img src="./assets/icons/crumb.svg" alt="" /><strong>Mi Cuenta</strong></div>
-          <div class="topbar-actions"><span></span><a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a></div>
+          <div class="topbar-actions"><span id="current-date"></span><a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a></div>
         </header>
         <section class="content-area account-content">
-          <header class="page-title"><h1>Mi Cuenta</h1><p>Identidad, acceso y empresa asociados a tu sesion.</p></header>
+          <header class="page-title"><h1>Mi Cuenta</h1><p>Identidad, rol operativo y empresa textil asociados a tu sesion activa.</p></header>
 
           <section class="account-profile" aria-labelledby="account-profile-title">
             <header><div class="account-avatar" id="account-avatar">U</div><div><h2 id="account-profile-title">Datos de la cuenta</h2><p id="account-full-name"></p></div></header>
@@ -47,7 +47,7 @@
           </section>
 
           <section class="danger-zone" aria-labelledby="danger-zone-title">
-            <div><h2 id="danger-zone-title">Eliminar cuenta</h2><p>Se cerraran todas tus sesiones y perderas el acceso al sistema.</p></div>
+            <div><h2 id="danger-zone-title">Eliminar cuenta</h2><p>Se cerraran todas tus sesiones activas y se revocara tu acceso al sistema.</p></div>
             <button class="danger-action" id="open-delete-account" type="button"><img src="./assets/icons/inventory-delete.svg" alt="" />Eliminar mi cuenta</button>
           </section>
           <p class="module-toast" id="account-message" role="status" hidden></p>

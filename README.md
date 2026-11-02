@@ -2,6 +2,8 @@
 
 Sistema web multiempresa para Vicmar, Grupo Cirsa y Telas Olímpica. El backend Node.js sirve el frontend y guarda autenticación, empleados, operaciones y reportes en **Supabase PostgreSQL**.
 
+> 🛡️ **Documentación de Seguridad**: Consulta [`SECURITY_ARCHITECTURE.md`](SECURITY_ARCHITECTURE.md) para revisar el detalle técnico de los **20 puntos de Hardening DevSecOps** implementados en el proyecto.
+
 ## Requisitos
 
 - Node.js 18 o superior.
@@ -23,11 +25,11 @@ Sistema web multiempresa para Vicmar, Grupo Cirsa y Telas Olímpica. El backend 
 
 1. En el panel del proyecto abre **SQL Editor** y pulsa **New query**.
 2. Copia **todo** el contenido de [`SRC/Backend/database/schema.sql`](SRC/Backend/database/schema.sql).
-3. Pulsa **Run**. El script es idempotente: usa `IF NOT EXISTS` y `ON CONFLICT`, por lo que se puede volver a ejecutar.
-4. Abre **Table Editor** y comprueba que existan, entre otras, `companies`, `users`, `auth_sessions`, `employees` y `business_datasets`.
+3. Pulsa **Run**. El script es idempotente: usa `IF NOT EXISTS`, `ON CONFLICT`, habilita **Row Level Security (RLS)** en todas las tablas y configura el rol de privilegios mínimos `app_backend_user`.
+4. Abre **Table Editor** y comprueba que existan, entre otras, `companies`, `users`, `auth_sessions`, `employees`, `business_datasets` y `security_audit_logs`.
 5. En `companies` deben aparecer Vicmar, Telas Olímpica y Grupo Cirsa.
 
-El script crea tablas, restricciones, índices y las tres empresas iniciales. Las migraciones defensivas del backend también crean cualquier tabla faltante al arrancar.
+El script crea tablas, restricciones, índices, políticas RLS y las tres empresas iniciales. Las migraciones defensivas del backend también crean cualquier tabla faltante al arrancar.
 
 ### 3. Obtener la URI correcta
 
@@ -51,46 +53,42 @@ Desde la raíz del repositorio:
 cp SRC/Backend/.env.example SRC/Backend/.env
 ```
 
-Edita `SRC/Backend/.env`:
+Edita `SRC/Backend/.env` configurando `SUPABASE_DB_URL`, `DATA_ENCRYPTION_KEY` (32 bytes hex para AES-256-GCM) y `PASSWORD_PEPPER`:
 
 ```dotenv
-SUPABASE_DB_URL=postgresql://postgres.PROJECT_REF:CONTRASENA_CODIFICADA@aws-0-REGION.pooler.supabase.com:6543/postgres
+SUPABASE_DB_URL=postgresql://app_backend_user.PROJECT_REF:CONTRASENA_CODIFICADA@aws-0-REGION.pooler.supabase.com:6543/postgres
 DB_SSL=true
 DB_POOL_MAX=10
 DB_CONNECTION_TIMEOUT_MS=15000
+DATA_ENCRYPTION_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+PASSWORD_PEPPER=tu-secreto-pepper-de-servidor
 PORT=3000
 NODE_ENV=development
 ```
 
-- `SUPABASE_DB_URL` es la URI PostgreSQL del paso anterior. También se acepta `DATABASE_URL`.
-- `DB_SSL=true` es lo recomendado para Supabase.
-- `DB_POOL_MAX` limita las conexiones simultáneas del proceso.
-- `DB_CONNECTION_TIMEOUT_MS` controla cuánto espera el backend por PostgreSQL antes de mostrar un diagnóstico (15 segundos por defecto).
-- `.env` está ignorado por Git. **Nunca** pongas la URI, la contraseña de PostgreSQL ni una `service_role` en el frontend o en un commit.
+- `.env` está ignorado por Git. **Nunca** pongas la URI, la contraseña de PostgreSQL ni claves privadas en el frontend o en un commit.
 
-En producción configura estas variables en el panel del proveedor de hosting, en lugar de subir `.env`. Para crear el primer administrador define temporalmente:
+Para crear el primer administrador define temporalmente:
 
 ```dotenv
-NODE_ENV=production
 BOOTSTRAP_ADMIN_EMAIL=admin@tu-dominio.com
 BOOTSTRAP_ADMIN_USERNAME=administrador
 BOOTSTRAP_ADMIN_PASSWORD=una-clave-segura-123
-APP_ORIGIN=https://tu-dominio.com
 ```
 
-La contraseña debe tener de 12 a 72 caracteres, al menos una letra y un número. Arranca una vez, verifica la cuenta y retira las tres variables `BOOTSTRAP_ADMIN_*` del entorno.
+La contraseña debe tener de 12 a 72 caracteres, al menos una letra y un número. Arranca una vez, verifica la cuenta y retira las variables `BOOTSTRAP_ADMIN_*` del entorno.
 
-### 5. Instalar y arrancar
+### 5. Instalar, probar y arrancar
 
 ```bash
 cd SRC/Backend
 npm install
+npm run check
+npm test
 npm start
 ```
 
 Abre `http://localhost:3000`. No abras los HTML mediante `file://` ni desde otro servidor: el frontend consume `/api` en el mismo origen.
-
-En desarrollo, si no existe un administrador activo, el backend crea la cuenta de demostración `administrador` / `Admin12345678`. No se crea automáticamente en producción.
 
 ### 6. Verificar la conexión
 
@@ -102,37 +100,31 @@ curl http://localhost:3000/api/companies
 
 Debe responder JSON con las tres empresas. El endpoint `/api/health` solo comprueba el proceso; `/api/companies` también obliga a consultar PostgreSQL y por eso es la prueba real de conexión.
 
-Si falla:
-
-- `Falta SUPABASE_DB_URL`: confirma que el archivo se llama exactamente `SRC/Backend/.env`.
-- `password authentication failed`: revisa la contraseña, el usuario del pooler y la codificación URL.
-- `getaddrinfo` o timeout: en Supabase abre **Connect > Connection string**, selecciona **Transaction pooler** (puerto `6543`) y reemplaza toda la URI anterior. Esta conexión funciona en redes IPv4; revisa además que el proyecto no esté pausado y que el host y la región no sean marcadores del ejemplo.
-- `relation ... does not exist`: vuelve a ejecutar `schema.sql` en SQL Editor y confirma que usaste el proyecto correcto.
-- `too many connections`: usa el pooler y reduce `DB_POOL_MAX`.
-
 ## Correo de recuperación
 
-Se aceptan `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` y `SMTP_STARTTLS`. Sin SMTP, el enlace de recuperación se muestra en la consola local.
+Se aceptan `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` y `SMTP_STARTTLS`. Sin SMTP, el enlace de recuperación se muestra en la consola local en modo desarrollo.
 
-## Seguridad y arquitectura
+## Seguridad y arquitectura (Hardening 20 Puntos)
 
-- El navegador solo llama al backend Node.js; la URI de PostgreSQL permanece en el servidor.
-- Las contraseñas se almacenan con `scrypt` y las sesiones expiran automáticamente.
-- Los permisos multiempresa y por módulo se vuelven a comprobar en cada solicitud.
-- No es necesario desactivar RLS para el cliente porque este proyecto no consulta tablas directamente con `supabase-js`. Si después se agrega acceso directo desde el navegador, deben habilitarse RLS y políticas específicas antes de exponer cualquier tabla.
-- Rota inmediatamente la contraseña de la base si una URI real se publica por accidente.
+- **Documentación completa**: Ver [`SECURITY_ARCHITECTURE.md`](SECURITY_ARCHITECTURE.md).
+- **Gateway Deny-by-Default**: Toda ruta `/api/*` privada exige sesión activa verificada en servidor y autorización RBAC.
+- **Cifrado en Reposo**: Campos sensibles (`identity_number`, `tax_number`, `social_security_number`) cifrados con `AES-256-GCM` e índice ciego `HMAC-SHA256`.
+- **Contraseñas y Sesiones**: Hashing `PBKDF2-HMAC-SHA512` (100,000 iteraciones, sal de 32 bytes y `PASSWORD_PEPPER`) y cookies `HttpOnly; SameSite=Strict; Secure`.
+- **Anti-Brute Force y Anti-Bots**: Bloqueo progresivo por IP/cuenta, Honeypot invisible, validación de tiempo de llenado y soporte Cloudflare Turnstile.
+- **RLS y Auditoría**: Row Level Security forzado en las 14 tablas de PostgreSQL y bitácora de auditoría en `security_audit_logs`.
 
 ## Estructura principal
 
 ```text
 SRC/
 |-- Backend/
-|   |-- config/       Conexión PostgreSQL, correo, autenticación y migraciones
-|   |-- database/     Esquema PostgreSQL para Supabase
-|   |-- modules/      Datos operativos y reportes contables
-|   `-- server.js     API y servidor del frontend
+|   |-- config/       Entorno, cifrado AES-256-GCM, validador, anti-bots, auditoría, DB y RBAC
+|   |-- database/     Esquema PostgreSQL con RLS y separación de privilegios
+|   |-- modules/      Empleados, registros operativos y reportes contables
+|   |-- test/         Suites unitarias de conectividad y 20 puntos de seguridad
+|   `-- server.js     Gateway HTTP, cabeceras de seguridad y servidor estático
 `-- Frontend/
-    |-- assets/       Estilos, iconos y controladores
+    |-- assets/       Estilos, iconos y controladores sanitizados contra XSS
     |-- modulo.html   Vistas operativas compartidas
     `-- reportes-contables.html
 ```

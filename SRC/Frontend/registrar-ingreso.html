@@ -3,96 +3,110 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion Empresarial | Registrar Ingreso</title>
+    <title>Gestion Empresarial | Costear e Ingresar Lote Textil</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
   </head>
   <body>
-    <main class="purchase-page" data-node-id="45:2">
+    <main class="purchase-page">
       <section class="purchase-shell" aria-labelledby="purchase-title">
         <a class="brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
 
         <header class="purchase-header">
           <nav class="mini-breadcrumbs" aria-label="Ruta">
-            <a href="./inventario.html">Inventarios</a>
+            <a href="./modulo.html?modulo=inventarios&vista=productos">Inventarios</a>
             <img src="./assets/icons/form-breadcrumb.svg" alt="" />
-            <a href="./registrar-ingreso.html">Ingreso de tela</a>
+            <strong>Ingreso y Costeo de Lote Textil</strong>
           </nav>
-          <h1 id="purchase-title">Registrar Nueva Tela / Ingreso</h1>
+          <h1 id="purchase-title">Registrar Ingreso de Rollos / Lote de Tela</h1>
         </header>
 
         <form class="purchase-form" id="purchase-form">
           <section class="form-section">
-            <h2>Informacion basica</h2>
+            <h2>Identificacion del Lote Textil</h2>
             <div class="field">
-              <label for="productId">ID de Tela</label>
-              <input id="productId" name="productId" type="text" placeholder="ej. TELA-00142" required />
+              <label for="productId">Codigo de Tela</label>
+              <input id="productId" name="productId" type="text" placeholder="Ej. TELA-00142" required />
             </div>
             <div class="field">
-              <label for="description">Descripcion de la tela</label>
-              <textarea id="description" name="description" placeholder="Describe tipo de tela, color, ancho y proveedor..." required></textarea>
+              <label for="description">Especificacion Tecnica de la Tela</label>
+              <textarea id="description" name="description" placeholder="Tipo de tejido, composicion, gramaje (oz/m2), ancho del rollo y proveedor..." required></textarea>
             </div>
           </section>
 
           <section class="form-section">
-            <h2>Cantidad de tela</h2>
+            <h2>Metraje y Embalaje</h2>
             <div class="field quantity-field">
-              <label for="quantity">Cantidad</label>
+              <label for="quantity">Cantidad recibida</label>
               <div class="quantity-control">
-                <input id="quantity" name="quantity" type="number" min="0" step="0.01" placeholder="0.00" />
+                <input id="quantity" name="quantity" type="number" min="0.01" step="0.01" placeholder="100.00" required />
                 <select id="unit" name="unit">
-                  <option>Metros</option>
-                  <option>Rollos</option>
-                  <option>Yardas</option>
+                  <option value="Metro">Metros</option>
+                  <option value="Rollo">Rollos</option>
+                  <option value="Yarda">Yardas</option>
                 </select>
               </div>
             </div>
+            <div class="field">
+              <label for="category">Categoria Textil</label>
+              <select id="category" name="category">
+                <option value="Algodon">Algodon</option>
+                <option value="Lino">Lino</option>
+                <option value="Poliester">Poliester</option>
+                <option value="Mezclilla">Mezclilla</option>
+                <option value="Gabardina">Gabardina</option>
+                <option value="Seda">Seda</option>
+              </select>
+            </div>
           </section>
 
           <section class="form-section">
-            <h2>Financiero y moneda</h2>
+            <h2>Costeo de Importacion / Compra</h2>
             <fieldset class="currency-options">
-              <legend>Moneda de ingreso</legend>
-              <label><input type="radio" name="currency" value="USD" checked /> <span>Dolares <small>USD</small></span></label>
-              <label><input type="radio" name="currency" value="HNL" /> <span>Lempiras <small>HNL</small></span></label>
+              <legend>Moneda de factura de origen</legend>
+              <label><input type="radio" name="currency" value="USD" checked /> <span>Dolares <small>USD ($)</small></span></label>
+              <label><input type="radio" name="currency" value="HNL" /> <span>Lempiras <small>HNL (L)</small></span></label>
             </fieldset>
 
             <div class="finance-grid">
-              <div class="field exchange-field">
+              <div class="field exchange-field" id="exchange-rate-wrapper">
                 <label for="exchangeRate">Tasa de cambio a HNL <img src="./assets/icons/form-info.svg" alt="" /></label>
-                <div class="money-input"><span>L</span><input id="exchangeRate" name="exchangeRate" type="number" min="0" step="0.01" value="38.50" /></div>
-              </div>
-              <div></div>
-              <div class="field">
-                <label for="totalCost">Costo Total</label>
-                <div class="money-input"><span>$</span><input id="totalCost" name="totalCost" type="number" min="0" step="0.01" placeholder="0.00" /></div>
+                <div class="money-input"><span>L</span><input id="exchangeRate" name="exchangeRate" type="number" min="0.01" step="0.01" value="24.75" required /></div>
               </div>
               <div class="field">
-                <label for="totalPrice">Precio Total</label>
-                <div class="money-input"><span>$</span><input id="totalPrice" name="totalPrice" type="number" min="0" step="0.01" placeholder="0.00" /></div>
+                <label for="totalCost">Costo Total del Lote</label>
+                <div class="money-input"><span id="cost-currency-prefix">$</span><input id="totalCost" name="totalCost" type="number" min="0.01" step="0.01" placeholder="0.00" required /></div>
+              </div>
+              <div class="field">
+                <label for="totalPrice">Valor Comercial Estimado</label>
+                <div class="money-input"><span id="price-currency-prefix">$</span><input id="totalPrice" name="totalPrice" type="number" min="0.01" step="0.01" placeholder="0.00" required /></div>
               </div>
             </div>
           </section>
 
           <section class="form-section">
-            <h2>Resultados calculados</h2>
-            <p>Calculado automaticamente en Lempiras (HNL).</p>
+            <h2>Rentabilidad Proyectada en Moneda Local</h2>
+            <p>Calculado automaticamente en la moneda oficial de la empresa activa.</p>
             <div class="results-grid">
-              <div><span>Utilidad</span><strong id="profitResult">-</strong></div>
-              <div><span>% de Utilidad</span><strong id="profitPercentResult">-</strong></div>
-              <div><span>Margen</span><strong id="marginResult">-</strong></div>
+              <div><span>Utilidad Bruta</span><strong id="profitResult">-</strong></div>
+              <div><span>% sobre Costo</span><strong id="profitPercentResult">-</strong></div>
+              <div><span>Margen Comercial</span><strong id="marginResult">-</strong></div>
             </div>
           </section>
 
+          <p class="input-error" id="purchase-error" role="alert" hidden></p>
+
           <div class="form-actions">
-            <a class="secondary-action" href="./inventario.html"><img src="./assets/icons/form-cancel.svg" alt="" />Cancelar</a>
-            <button class="submit-button save-record" type="submit">Guardar Registro</button>
+            <a class="secondary-action" href="./modulo.html?modulo=inventarios&vista=productos"><img src="./assets/icons/form-cancel.svg" alt="" />Cancelar</a>
+            <button class="submit-button save-record" id="purchase-submit" type="submit">Guardar Ingreso</button>
           </div>
         </form>
       </section>
     </main>
+    <script src="./assets/js/user-db.js"></script>
+    <script src="./assets/js/session.js"></script>
     <script src="./assets/js/purchase.js"></script>
   </body>
 </html>

@@ -39,26 +39,42 @@ function updateSummary(rows) {
 function renderEmployees() {
   employeeTable.querySelectorAll(".employee-row:not(.head), .employee-empty").forEach((row) => row.remove());
   const term = employeeSearch.value.trim().toLowerCase();
-  const filtered = employees.filter((employee) => [employee.firstName, employee.lastName, employee.secondLastName, employee.email, employee.position, employee.branch, employee.systemRole]
-    .join(" ").toLowerCase().includes(term));
+  const filtered = employees.filter((employee) =>
+    [employee.firstName, employee.lastName, employee.secondLastName, employee.email, employee.position, employee.branch, employee.company, employee.systemRole]
+      .join(" ")
+      .toLowerCase()
+      .includes(term)
+  );
   updateSummary(filtered);
   if (!filtered.length) {
     employeeTable.insertAdjacentHTML("beforeend", '<div class="employee-empty">No hay empleados que coincidan con los filtros.</div>');
     return;
   }
-  employeeTable.insertAdjacentHTML("beforeend", filtered.map((employee) => `
+  employeeTable.insertAdjacentHTML(
+    "beforeend",
+    filtered
+      .map(
+        (employee) => `
     <div class="employee-row" data-employee-id="${employee.id}">
-      <div class="employee-name"><b>${initials(employee)}</b><strong>${escapeHtml([employee.firstName, employee.lastName, employee.secondLastName].filter(Boolean).join(" "))}</strong><span>${escapeHtml(employee.email)}</span></div>
-      <span>${escapeHtml(employee.position)}</span><span>${escapeHtml(employee.branch)}</span><b class="status ${employee.status === "Activo" ? "complete" : "pending"}">${escapeHtml(employee.systemRole)}</b>
+      <div class="employee-name"><b>${initials(employee)}</b><strong>${escapeHtml(
+        [employee.firstName, employee.lastName, employee.secondLastName].filter(Boolean).join(" ")
+      )}</strong><span>${escapeHtml(employee.email)}</span></div>
+      <span>${escapeHtml(employee.position)}</span><span>${escapeHtml(
+        employee.company ? `${employee.branch} · ${employee.company}` : employee.branch
+      )}</span><b class="status ${employee.status === "Activo" ? "complete" : "pending"}">${escapeHtml(employee.systemRole)}</b>
       <span class="row-actions"><a href="./empleado.html?id=${employee.id}" title="Editar empleado" aria-label="Editar empleado"><img src="./assets/icons/inventory-edit.svg" alt="" /></a><button type="button" data-action="delete" title="Eliminar empleado" aria-label="Eliminar empleado"><img src="./assets/icons/inventory-delete.svg" alt="" /></button></span>
-    </div>`).join(""));
+    </div>`
+      )
+      .join("")
+  );
 }
 
 async function loadEmployees() {
   employeeTable.querySelectorAll(".employee-row:not(.head), .employee-empty").forEach((row) => row.remove());
   employeeTable.insertAdjacentHTML("beforeend", '<div class="employee-empty">Cargando empleados...</div>');
   try {
-    employees = await window.gestionUserDb.listEmployees({ companyId: companySelect.value, status: employeeStatus.value });
+    const selectedCompanyId = companySelect.value || (currentEmployeeUser?.isGlobalAdmin ? "all" : currentEmployeeUser?.companyId);
+    employees = await window.gestionUserDb.listEmployees({ companyId: selectedCompanyId, status: employeeStatus.value });
     renderEmployees();
   } catch (error) {
     employees = [];
@@ -71,7 +87,9 @@ async function setupCompanies() {
   if (!currentEmployeeUser?.isGlobalAdmin) return;
   try {
     const companies = await window.gestionUserDb.listCompanies();
-    companySelect.innerHTML = companies.map((company) => `<option value="${company.id}" ${Number(company.id) === Number(currentEmployeeUser.companyId) ? "selected" : ""}>${escapeHtml(company.name)}</option>`).join("");
+    companySelect.innerHTML =
+      '<option value="all" selected>Todas las empresas</option>' +
+      companies.map((company) => `<option value="${company.id}">${escapeHtml(company.name)}</option>`).join("");
     companyFilter.hidden = false;
   } catch (error) {
     showMessage(error.message, true);

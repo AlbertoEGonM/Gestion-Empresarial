@@ -1,54 +1,33 @@
 const catalogData = {
   categorias: {
-    search: "Buscar categoria...",
+    search: "Buscar categoria de tela...",
     button: "+ Nueva Categoria",
     formTitle: "Nueva Categoria",
-    formHelp: "Registra una familia de telas para clasificar inventario, compras y ventas.",
+    formHelp: "Registra una familia de telas para clasificar rollos, lotes, compras y ventas.",
     namePlaceholder: "Ej. Gabardina",
-    descriptionPlaceholder: "Ej. Tela resistente para uniformes y prendas de trabajo.",
+    descriptionPlaceholder: "Ej. Sarga de algodon/poliester resistente para uniformes e indumentaria.",
     countLabel: "registros",
-    rows: [
-      { name: "Algodon", description: "Fibra natural de origen vegetal, alta absorcion.", status: "Activo" },
-      { name: "Lino", description: "Tejido natural de lino, fresco y resistente.", status: "Activo" },
-      { name: "Poliester", description: "Fibra sintetica, alta durabilidad y facil cuidado.", status: "Activo" },
-      { name: "Seda", description: "Fibra natural de alta gama, suave y brillante.", status: "Activo" },
-      { name: "Mezclilla", description: "Tela de denim, ideal para prendas casuales y de trabajo.", status: "Activo" },
-      { name: "Lana", description: "Fibra animal, excelente para prendas de abrigo.", status: "Activo" },
-      { name: "Viscosa", description: "Fibra semisintetica derivada de celulosa de madera.", status: "Inactivo" },
-    ],
+    rows: [],
   },
   unidades: {
-    search: "Buscar unidad...",
+    search: "Buscar unidad de medida...",
     button: "+ Nueva Unidad",
     formTitle: "Nueva Unidad",
-    formHelp: "Define como se medira o vendera la tela dentro del inventario.",
-    namePlaceholder: "Ej. Bobina",
-    descriptionPlaceholder: "Ej. Unidad usada para rollos completos de proveedor.",
+    formHelp: "Define como se cuantifica y comercializa la tela en almacenes y facturacion.",
+    namePlaceholder: "Ej. Fardo",
+    descriptionPlaceholder: "Ej. Empaque mayorista de rollos prensados para importacion.",
     countLabel: "registros",
-    rows: [
-      { name: "Metro", description: "Unidad de longitud estandar internacional.", status: "Activo" },
-      { name: "Yarda", description: "Unidad anglosajona equivalente a 0.9144 m.", status: "Activo" },
-      { name: "Rollo", description: "Bobina completa de tela, varia entre 40-100 metros.", status: "Activo" },
-      { name: "Pieza", description: "Unidad individual de corte o articulo terminado.", status: "Activo" },
-      { name: "Kilogramo", description: "Medida de peso para telas vendidas a granel.", status: "Activo" },
-    ],
+    rows: [],
   },
   colores: {
-    search: "Buscar color...",
+    search: "Buscar tono o codigo hexadecimal...",
     button: "+ Nuevo Color",
     formTitle: "Nuevo Color",
-    formHelp: "Agrega colores usando su codigo HTML para que se identifiquen visualmente.",
+    formHelp: "Registra tonos textiles con su muestra hexadecimal para control de lotes de tenido.",
     namePlaceholder: "Ej. Verde Oliva",
-    descriptionPlaceholder: "Ej. Codigo #556B2F — color para colecciones militares.",
+    descriptionPlaceholder: "Ej. Codigo #556B2F — tenido reactivo para linea institucional.",
     countLabel: "registros",
-    rows: [
-      { name: "Blanco Optico", description: "Codigo #F5F5F5 — base estandar para tenido.", status: "Activo", color: "#f5f5f5" },
-      { name: "Negro Intenso", description: "Codigo #111111 — tinte de alta fijacion.", status: "Activo", color: "#111111" },
-      { name: "Azul Marino", description: "Codigo #1B2A4A — clasico para uniformes y moda.", status: "Activo", color: "#1b2a4a" },
-      { name: "Rojo Carmesi", description: "Codigo #B22222 — pigmento de alta saturacion.", status: "Activo", color: "#b22222" },
-      { name: "Crudo Natural", description: "Codigo #EDE7D9 — sin blanquear, tono natural.", status: "Activo", color: "#ede7d9" },
-      { name: "Gris Oxford", description: "Codigo #6B7280 — gris medio para colecciones.", status: "Inactivo", color: "#6b7280" },
-    ],
+    rows: [],
   },
 };
 
@@ -69,12 +48,76 @@ const colorPreview = document.querySelector("#color-preview");
 const errorMessage = document.querySelector("#catalog-error");
 const clearButton = document.querySelector("#catalog-clear");
 const cancelButton = document.querySelector("#catalog-cancel");
+const submitButton = document.querySelector("#catalog-submit");
+const toast = document.querySelector("#catalog-toast");
 
 let activeCatalog = "categorias";
 let editIndex = null;
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>'"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[ch]));
+}
+
+function showToast(message, isError = false) {
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.toggle("error", Boolean(isError));
+  toast.hidden = false;
+  window.clearTimeout(showToast.timer);
+  showToast.timer = window.setTimeout(() => {
+    toast.hidden = true;
+  }, 3000);
+}
+
 function statusClass(status) {
   return status === "Activo" ? "complete" : "pending";
+}
+
+function normalizeHex(value) {
+  const clean = String(value || "").trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(clean)) {
+    return clean.toUpperCase();
+  }
+  return "";
+}
+
+function serializeCatalogRows(catalogKey) {
+  return catalogData[catalogKey].rows.map((item) => [
+    item.name,
+    item.description,
+    item.status,
+    item.color || "",
+    item.serial || "Asignando...",
+  ]);
+}
+
+function deserializeCatalogRows(rawRows) {
+  return rawRows.map((arr) => ({
+    name: String(arr[0] || ""),
+    description: String(arr[1] || ""),
+    status: arr[2] === "Inactivo" ? "Inactivo" : "Activo",
+    color: normalizeHex(arr[3] || ""),
+    serial: String(arr[4] || arr.at(-1) || ""),
+  }));
+}
+
+async function syncCatalog(catalogKey) {
+  try {
+    const dataset = await window.gestionUserDb.getDataset("inventarios", catalogKey);
+    if (dataset.initialized && Array.isArray(dataset.rows)) {
+      catalogData[catalogKey].rows = deserializeCatalogRows(dataset.rows);
+    } else {
+      catalogData[catalogKey].rows = [];
+    }
+    if (activeCatalog === catalogKey) renderRows();
+  } catch (error) {
+    // Mantiene los valores en memoria si el usuario no tiene conexion temporal
+  }
+}
+
+async function persistActiveCatalog() {
+  const saved = await window.gestionUserDb.saveDataset("inventarios", activeCatalog, serializeCatalogRows(activeCatalog));
+  catalogData[activeCatalog].rows = deserializeCatalogRows(saved.rows);
 }
 
 function renderRows() {
@@ -82,33 +125,31 @@ function renderRows() {
   const term = searchInput.value.trim().toLowerCase();
   const rows = catalog.rows
     .map((row, index) => ({ ...row, index }))
-    .filter((row) => `${row.name} ${row.description} ${row.status}`.toLowerCase().includes(term));
+    .filter((row) => `${row.name} ${row.description} ${row.status} ${row.serial || ""}`.toLowerCase().includes(term));
 
   countLabel.textContent = `${rows.length} ${catalog.countLabel}`;
+  if (!rows.length) {
+    rowsContainer.innerHTML = '<div class="employee-empty">Aun no hay registros en este catalogo. Haz clic en el boton superior para agregar el primero.</div>';
+    return;
+  }
   rowsContainer.innerHTML = rows
     .map((row) => {
-      const swatch = row.color ? `<i class="color-swatch" style="--swatch:${row.color}"></i>` : "";
+      const validHex = normalizeHex(row.color);
+      const swatch = validHex ? `<i class="color-swatch" style="--swatch:${escapeHtml(validHex)}"></i>` : "";
       return `
         <div class="catalog-row" data-index="${row.index}">
-          <strong>${swatch}${row.name}</strong>
-          <span>${row.description}</span>
-          <b class="status ${statusClass(row.status)}">${row.status}</b>
+          <strong>${swatch}${escapeHtml(row.name)}</strong>
+          <span>${escapeHtml(row.description)}</span>
+          <span class="serial-cell"><code>${escapeHtml(row.serial || "Asignando...")}</code></span>
+          <b class="status ${statusClass(row.status)}">${escapeHtml(row.status)}</b>
           <span class="row-actions">
-            <button type="button" data-action="edit"><img src="./assets/icons/inventory-edit.svg" alt="Editar" /></button>
-            <button type="button" data-action="delete"><img src="./assets/icons/inventory-delete.svg" alt="Eliminar" /></button>
+            <button type="button" data-action="edit" title="Editar" aria-label="Editar"><img src="./assets/icons/inventory-edit.svg" alt="" /></button>
+            <button type="button" data-action="delete" title="Eliminar" aria-label="Eliminar"><img src="./assets/icons/inventory-delete.svg" alt="" /></button>
           </span>
         </div>
       `;
     })
     .join("");
-}
-
-function normalizeHex(value) {
-  const clean = value.trim();
-  if (/^#[0-9a-fA-F]{6}$/.test(clean)) {
-    return clean.toUpperCase();
-  }
-  return "";
 }
 
 function updateColorPreview() {
@@ -159,6 +200,7 @@ function setCatalog(nextCatalog) {
   });
 
   renderRows();
+  syncCatalog(activeCatalog);
 }
 
 tabs.forEach((tab) => {
@@ -178,15 +220,25 @@ clearButton.addEventListener("click", () => {
 });
 colorInput.addEventListener("input", updateColorPreview);
 
-rowsContainer.addEventListener("click", (event) => {
+rowsContainer.addEventListener("click", async (event) => {
   const button = event.target.closest("button");
   const row = event.target.closest(".catalog-row");
   if (!button || !row) return;
 
   const index = Number(row.dataset.index);
+  if (!Number.isInteger(index) || index < 0 || index >= catalogData[activeCatalog].rows.length) return;
+
   if (button.dataset.action === "delete") {
+    button.disabled = true;
     catalogData[activeCatalog].rows.splice(index, 1);
     renderRows();
+    try {
+      await persistActiveCatalog();
+      renderRows();
+      showToast("Elemento eliminado del catalogo.");
+    } catch (error) {
+      showToast(error.message, true);
+    }
     return;
   }
 
@@ -200,7 +252,7 @@ rowsContainer.addEventListener("click", (event) => {
   showForm();
 });
 
-catalogForm.addEventListener("submit", (event) => {
+catalogForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const name = nameInput.value.trim();
   const description = descriptionInput.value.trim();
@@ -212,20 +264,33 @@ catalogForm.addEventListener("submit", (event) => {
     return;
   }
 
-  const nextRow = { name, description, status };
+  const wasEditing = editIndex !== null;
+  const previousSerial = wasEditing ? catalogData[activeCatalog].rows[editIndex]?.serial : "Asignando...";
+  const nextRow = { name, description, status, serial: previousSerial || "Asignando..." };
   if (activeCatalog === "colores") {
     nextRow.color = color;
     nextRow.description = description.includes("#") ? description : `Codigo ${color} — ${description}`;
   }
 
-  if (editIndex === null) {
+  if (!wasEditing) {
     catalogData[activeCatalog].rows.unshift(nextRow);
   } else {
     catalogData[activeCatalog].rows[editIndex] = nextRow;
   }
 
-  hideForm();
-  renderRows();
+  submitButton.disabled = true;
+  submitButton.textContent = "Guardando...";
+  try {
+    await persistActiveCatalog();
+    hideForm();
+    renderRows();
+    showToast(wasEditing ? "Catalogo actualizado correctamente." : "Registro agregado al catalogo.");
+  } catch (error) {
+    showToast(error.message, true);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = "Guardar";
+  }
 });
 
 setCatalog(activeCatalog);

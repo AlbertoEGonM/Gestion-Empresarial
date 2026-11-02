@@ -7,26 +7,26 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
   </head>
   <body data-admin-only="true">
-    <main class="app-layout" data-node-id="63:2">
+    <main class="app-layout">
       <aside class="sidebar">
         <a class="brand sidebar-brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
         <nav class="side-nav" aria-label="Modulos">
-          <p>M&oacute;dulos</p>
+          <p>Modulos</p>
           <a href="./dashboard.html"><img src="./assets/icons/dashboard.svg" alt="" />Dashboard</a>
           <a class="active" href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
-          <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturaci&oacute;n / Ventas</a>
-          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
           <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
         </nav>
         <div class="user-box">
-          <div class="avatar">GH</div>
+          <div class="avatar">--</div>
           <div>
-            <strong>gabrielh</strong>
-            <span>Administrador</span>
+            <strong>Usuario</strong>
+            <span>Sesion activa</span>
           </div>
           <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
         </div>
@@ -39,20 +39,20 @@
             <img src="./assets/icons/crumb.svg" alt="" />
             <a href="./admin.html">Administrador</a>
             <img src="./assets/icons/crumb.svg" alt="" />
-            <strong>Configuraci&oacute;n</strong>
+            <strong>Configuracion Fiscal y Operativa</strong>
           </div>
           <div class="topbar-actions">
-            <span>Lunes, 3 de agosto 2026</span>
+            <span id="current-date"></span>
             <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
           </div>
         </header>
 
-        <section class="content-area config-content" data-node-id="63:135">
+        <section class="content-area config-content">
           <form class="config-shell" id="general-config-form">
             <header class="config-page-heading">
               <div>
-                <h1>Configuraci&oacute;n General del Sistema</h1>
-                <p>Ajustes globales de la empresa, par&aacute;metros financieros y facturaci&oacute;n SAR.</p>
+                <h1>Configuracion General del Sistema</h1>
+                <p id="config-subtitle">Ajustes fiscales de la empresa textil activa, parametros de inventario de rollos y autorizacion tributaria.</p>
               </div>
               <button class="config-save" id="config-save" type="submit">Guardar Cambios</button>
             </header>
@@ -60,13 +60,13 @@
             <div class="config-grid">
               <section class="config-card config-profile" aria-labelledby="company-profile-title">
                 <header class="config-card-heading">
-                  <h2 id="company-profile-title">Perfil de la Empresa</h2>
-                  <p>Informaci&oacute;n legal y de contacto principal.</p>
+                  <h2 id="company-profile-title">Perfil de la Empresa Textil</h2>
+                  <p>Informacion legal y sede operativa principal.</p>
                 </header>
 
                 <div class="company-logo-row">
                   <div class="company-logo">
-                    <span id="company-logo-letter">T</span>
+                    <span id="company-logo-letter">V</span>
                     <img id="company-logo-preview" alt="Vista previa del logo de la empresa" hidden />
                     <button id="logo-trigger" type="button" aria-label="Cambiar logo" title="Cambiar logo">
                       <img src="./assets/icons/config-camera.svg" alt="" />
@@ -75,47 +75,44 @@
                   </div>
                   <div>
                     <strong>Logo de la Empresa</strong>
-                    <p>PNG o JPG. M&aacute;x. 1 MB.<br />Aparece en facturas y reportes.</p>
+                    <p>PNG o JPG. Max. 1 MB.<br />Aparece en estados financieros y facturas de tela.</p>
                   </div>
                 </div>
                 <p class="config-file-error" id="logo-error" role="alert" hidden></p>
 
                 <div class="config-fields">
                   <div class="config-field">
-                    <label for="business-name">Raz&oacute;n Social</label>
-                    <input id="business-name" name="businessName" type="text" value="Distribuidora Textil del Norte S.A. de C.V." required />
-                    <small>Tal como aparece en el RTN y documentos oficiales.</small>
+                    <label for="business-name">Razon Social</label>
+                    <input id="business-name" name="businessName" type="text" required />
+                    <small>Nombre legal registrado ante la autoridad tributaria.</small>
                   </div>
                   <div class="config-field">
                     <label for="business-rtn">RTN (Registro Tributario Nacional)</label>
-                    <input id="business-rtn" name="rtn" type="text" value="08011985123456" inputmode="numeric" pattern="[0-9]{14}" maxlength="14" required />
-                    <small>14 d&iacute;gitos sin guiones.</small>
+                    <input id="business-rtn" name="rtn" type="text" maxlength="14" required />
+                    <small id="business-rtn-help">Identificador fiscal de la empresa activa.</small>
                   </div>
                   <div class="config-field">
-                    <label for="business-address">Direcci&oacute;n Matriz</label>
-                    <textarea id="business-address" name="address" placeholder="Direcci&oacute;n completa de la sede principal..."></textarea>
+                    <label for="business-address">Direccion de Bodega y Sede Matriz</label>
+                    <textarea id="business-address" name="address" placeholder="Direccion completa de la planta o distribuidora textil..."></textarea>
                   </div>
                 </div>
               </section>
               <div class="config-column">
                 <section class="config-card" aria-labelledby="finance-title">
                   <header class="config-card-heading">
-                    <h2 id="finance-title">Par&aacute;metros Financieros y de Inventario</h2>
-                    <p>Tasas, impuestos y umbrales operativos.</p>
+                    <h2 id="finance-title">Parametros Financieros y de Inventario Textil</h2>
+                    <p>Tasas de importacion, impuestos y umbral minimo de metros por rollo.</p>
                   </header>
                   <div class="config-fields">
                     <div class="config-field">
                       <div class="config-label-line">
                         <label for="exchange-rate">Tasa de Cambio Oficial (USD a HNL)</label>
-                        <button class="config-tooltip" type="button" aria-label="Informacion sobre la tasa de cambio" data-tooltip="Utiliza la tasa oficial publicada por el BCH.">
-                          <img src="./assets/icons/config-info.svg" alt="" />
-                        </button>
                       </div>
                       <div class="config-input-group">
                         <span>L</span>
-                        <input id="exchange-rate" name="exchangeRate" type="number" value="38.52" min="0" step="0.01" required />
+                        <input id="exchange-rate" name="exchangeRate" type="number" value="24.75" min="0.01" step="0.01" required />
                       </div>
-                      <small>Tasa oficial BCH. Se aplica a compras y costos en d&oacute;lares.</small>
+                      <small>Aplicada a importaciones de fardos y rollos facturados en USD.</small>
                     </div>
                     <div class="config-field">
                       <label for="sales-tax">Impuesto sobre Ventas (ISV)</label>
@@ -123,32 +120,32 @@
                         <span>%</span>
                         <input id="sales-tax" name="salesTax" type="number" value="15" min="0" max="100" step="0.01" required />
                       </div>
-                      <small>Tasa est&aacute;ndar Honduras: 15%. Bienes exentos: 0%.</small>
+                      <small>Tasa estandar vigente segun el pais de operacion.</small>
                     </div>
                     <div class="config-field">
                       <div class="config-label-line">
-                        <label for="minimum-stock">Alerta de Stock M&iacute;nimo</label>
+                        <label for="minimum-stock">Alerta de Stock Minimo por Tela</label>
                         <img class="config-warning" src="./assets/icons/config-warning.svg" alt="" title="Umbral de alerta" />
                       </div>
                       <div class="config-input-group">
                         <span>Mts</span>
-                        <input id="minimum-stock" name="minimumStock" type="number" value="50" min="0" step="1" required />
+                        <input id="minimum-stock" name="minimumStock" type="number" value="100" min="0" step="1" required />
                       </div>
-                      <small>El sistema mostrar&aacute; una alerta cuando el inventario baje de este umbral.</small>
+                      <small>El modulo de inventarios marcara en alerta las telas debajo de este metraje.</small>
                     </div>
                   </div>
                 </section>
 
                 <section class="config-card" aria-labelledby="billing-title">
                   <header class="config-card-heading">
-                    <h2 id="billing-title">Par&aacute;metros de Facturaci&oacute;n SAR</h2>
-                    <p>Autorizaci&oacute;n del Servicio de Administraci&oacute;n de Rentas (SAR) de Honduras.</p>
+                    <h2 id="billing-title">Parametros de Facturacion SAR</h2>
+                    <p>Autorizacion fiscal vigente para emision de facturas comerciales.</p>
                   </header>
                   <div class="config-fields">
                     <div class="config-field">
-                      <label for="billing-cai">CAI &mdash; Clave de Autorizaci&oacute;n de Impresi&oacute;n</label>
+                      <label for="billing-cai">CAI - Clave de Autorizacion de Impresion</label>
                       <input id="billing-cai" name="cai" type="text" value="3D5A9E-19B2C4-4F8A61-2E7D30-F1C5B9-0A" maxlength="42" required />
-                      <small>Emitido por el SAR. Formato: 6 bloques separados por guiones.</small>
+                      <small id="billing-cai-help">Registro de autorizacion fiscal para documentos emitidos.</small>
                     </div>
                     <div class="config-range">
                       <div class="config-field">
@@ -161,26 +158,27 @@
                       </div>
                     </div>
                     <div class="config-field">
-                      <label for="billing-deadline">Fecha L&iacute;mite de Emisi&oacute;n</label>
+                      <label for="billing-deadline">Fecha Limite de Emision</label>
                       <div class="config-date-control">
                         <input id="billing-deadline" name="billingDeadline" type="date" value="2026-12-31" required />
                         <button id="date-trigger" type="button" aria-label="Abrir calendario" title="Abrir calendario">
                           <img src="./assets/icons/config-calendar.svg" alt="" />
                         </button>
                       </div>
-                      <small>El sistema bloquear&aacute; la emisi&oacute;n de facturas despu&eacute;s de esta fecha.</small>
+                      <small>Vigencia autorizada para el rango de facturacion actual.</small>
                     </div>
                   </div>
                 </section>
               </div>
             </div>
+            <p class="module-toast" id="config-toast" role="status" aria-live="polite" hidden></p>
             <p class="sr-status" id="config-status" aria-live="polite"></p>
           </form>
         </section>
       </section>
     </main>
-    <script src="./assets/js/configuracion.js"></script>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/configuracion.js"></script>
   </body>
 </html>

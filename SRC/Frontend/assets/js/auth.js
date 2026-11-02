@@ -7,7 +7,20 @@ const usernameInput = document.querySelector("#username");
 const loginAlert = document.querySelector("#login-alert");
 const resetForm = document.querySelector("#reset-form");
 const resetStatus = document.querySelector("#reset-status");
+const honeypotInput = document.querySelector("#website_url");
 const validation = window.gestionValidation;
+const formRenderedAt = Date.now();
+
+function setStatusParagraph(container, mainMessage, suffixText) {
+  const p = container?.querySelector("p");
+  if (!p) return;
+  p.textContent = `${String(mainMessage || "")} `;
+  if (suffixText) {
+    const span = document.createElement("span");
+    span.textContent = suffixText;
+    p.appendChild(span);
+  }
+}
 
 if (usernameInput && sessionStorage.getItem("gestionUser")) {
   usernameInput.value = sessionStorage.getItem("gestionUser");
@@ -26,6 +39,7 @@ if (togglePasswordButton && passwordInput) {
     togglePasswordButton.setAttribute("aria-label", isHidden ? "Ocultar contrasena" : "Mostrar contrasena");
   });
 }
+
 if (loginForm) {
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -35,7 +49,14 @@ if (loginForm) {
     try {
       submitButton.disabled = true;
       submitButton.textContent = "Iniciando sesion...";
-      const loggedUser = await window.gestionUserDb.loginUser(usernameInput.value, passwordInput.value);
+      const loggedUser = await window.gestionUserDb.loginUser(
+        usernameInput.value,
+        passwordInput.value,
+        {
+          website_url: honeypotInput ? honeypotInput.value : "",
+          _form_ts: formRenderedAt,
+        }
+      );
       if (!loggedUser) {
         passwordInput.value = "";
         passwordInput.focus();
@@ -76,8 +97,11 @@ if (recoverForm) {
     try {
       submitButton.disabled = true;
       submitButton.textContent = "Enviando...";
-      const result = await window.gestionUserDb.recoverPassword(email);
-      recoverStatus.querySelector("p").innerHTML = `${result.message} <span>Revisa tu bandeja de entrada.</span>`;
+      const result = await window.gestionUserDb.recoverPassword(email, {
+        website_url: honeypotInput ? honeypotInput.value : "",
+        _form_ts: formRenderedAt,
+      });
+      setStatusParagraph(recoverStatus, result.message, "Revisa tu bandeja de entrada.");
       recoverStatus.hidden = false;
     } catch (error) {
       recoverStatus.querySelector("p").textContent = error.message;
@@ -108,7 +132,7 @@ if (resetForm) {
       submitButton.disabled = true;
       submitButton.textContent = "Guardando...";
       const result = await window.gestionUserDb.resetPassword(token, password);
-      resetStatus.querySelector("p").innerHTML = `${result.message} <span>Ya puedes iniciar sesion.</span>`;
+      setStatusParagraph(resetStatus, result.message, "Ya puedes iniciar sesion.");
       resetStatus.hidden = false;
       resetForm.reset();
     } catch (error) {

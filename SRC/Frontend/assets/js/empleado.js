@@ -4,48 +4,90 @@ const employeeError = document.querySelector("#employee-form-error");
 const employeeCompanyField = document.querySelector("#employee-company-field");
 const employeeCompany = document.querySelector("#employee-company");
 const employeeCompanyName = document.querySelector("#employee-company-name");
+const employeeCountryBadge = document.querySelector("#employee-country-badge");
+const employeeDocsHeading = document.querySelector("#employee-docs-heading");
 const employeeTitle = document.querySelector("#employee-form-title");
+const employeeCrumbTitle = document.querySelector("#employee-crumb-title");
 const employeeSave = document.querySelector("#save-employee");
 const employeeInitials = document.querySelector("#employee-initials");
+const branchSelect = document.querySelector("#branch");
 const employeeId = new URLSearchParams(window.location.search).get("id");
-const employeeUser = window.gestionUserDb.getCurrentUser() || {};
 const validation = window.gestionValidation;
 
+const BRANCHES_BY_COUNTRY = {
+  HN: ["Bodega Central", "Sucursal Principal", "Oficina Central", "Sucursal San Pedro"],
+  MX: ["Bodega Central CDMX", "Sucursal Principal CDMX", "Oficina Central", "Centro Textil Guadalajara"],
+};
+
 let employeeCompanies = [];
+let loadedEmployee = null;
+
+function currentSessionUser() {
+  return window.gestionUserDb.getCurrentUser() || {};
+}
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[character]));
 }
 
 function selectedCompany() {
-  const id = employeeUser.isGlobalAdmin ? Number(employeeCompany.value || employeeUser.companyId) : Number(employeeUser.companyId);
-  return employeeCompanies.find((company) => Number(company.id) === id) || {
-    id,
-    name: employeeUser.company,
-    countryCode: employeeUser.countryCode,
-  };
+  const user = currentSessionUser();
+  const id = loadedEmployee?.companyId
+    ? Number(loadedEmployee.companyId)
+    : user.isGlobalAdmin
+      ? Number(employeeCompany.value || user.companyId)
+      : Number(user.companyId);
+  return (
+    employeeCompanies.find((company) => Number(company.id) === id) || {
+      id,
+      name: user.company || "Vicmar",
+      countryCode: user.countryCode || "HN",
+      countryName: user.countryName || "Honduras",
+    }
+  );
 }
 
 function updateInitials() {
-  employeeInitials.textContent = `${employeeForm.elements.firstName.value.charAt(0)}${employeeForm.elements.lastName.value.charAt(0)}`.toUpperCase() || "NE";
+  if (!employeeInitials) return;
+  const first = employeeForm.elements.firstName.value.trim().charAt(0);
+  const last = employeeForm.elements.lastName.value.trim().charAt(0);
+  employeeInitials.textContent = `${first}${last}`.toUpperCase() || "NE";
 }
 
-function applyCountryDocuments() {
+function populateBranches(countryCode, preferredBranch = "") {
+  const baseBranches = BRANCHES_BY_COUNTRY[countryCode === "MX" ? "MX" : "HN"];
+  const options = preferredBranch && !baseBranches.includes(preferredBranch) ? [preferredBranch, ...baseBranches] : baseBranches;
+  const currentVal = preferredBranch || branchSelect.value || options[0];
+  branchSelect.innerHTML = options
+    .map((item) => `<option value="${escapeHtml(item)}"${item === currentVal ? " selected" : ""}>${escapeHtml(item)}</option>`)
+    .join("");
+}
+
+function applyCountryDocuments(preferredBranch = "") {
   const company = selectedCompany();
   const isMexico = company.countryCode === "MX";
-  employeeCompanyName.textContent = company.name;
+  if (employeeCompanyName) employeeCompanyName.textContent = company.name;
+  if (employeeCountryBadge) {
+    employeeCountryBadge.textContent = isMexico ? "Mexico (MX)" : "Honduras (HN)";
+  }
+  if (employeeDocsHeading) {
+    employeeDocsHeading.textContent = isMexico
+      ? "Documentos Oficiales de Mexico (CURP / RFC / IMSS)"
+      : "Documentos Oficiales de Honduras (DNI / RTN / IHSS)";
+  }
   const identity = employeeForm.elements.identityNumber;
   const tax = employeeForm.elements.taxNumber;
   const social = employeeForm.elements.socialSecurityNumber;
-  document.querySelector('label[for="curp"]').textContent = isMexico ? "CURP" : "DNI / Identidad";
-  document.querySelector('label[for="rfc"]').textContent = isMexico ? "RFC" : "RTN";
-  document.querySelector('label[for="imss"]').textContent = isMexico ? "IMSS / Seguro Social" : "IHSS / Seguro Social";
-  identity.placeholder = isMexico ? "18 caracteres" : "13 digitos";
-  tax.placeholder = isMexico ? "12 o 13 caracteres" : "14 digitos";
-  social.placeholder = isMexico ? "11 digitos" : "Numero de afiliacion";
+  document.querySelector('label[for="curp"]').textContent = isMexico ? "CURP (Clave Unica de Registro de Poblacion)" : "DNI / Identidad Nacional";
+  document.querySelector('label[for="rfc"]').textContent = isMexico ? "RFC (SAT)" : "RTN (SAR)";
+  document.querySelector('label[for="imss"]').textContent = isMexico ? "NSS / IMSS" : "IHSS / Seguro Social";
+  identity.placeholder = isMexico ? "18 caracteres alfanumericos" : "13 digitos sin guiones";
+  tax.placeholder = isMexico ? "12 o 13 caracteres" : "14 digitos sin guiones";
+  social.placeholder = isMexico ? "11 digitos" : "Numero de afiliacion IHSS";
   identity.maxLength = isMexico ? 18 : 13;
   tax.maxLength = isMexico ? 13 : 14;
   social.maxLength = isMexico ? 11 : 20;
+  populateBranches(company.countryCode, preferredBranch);
 }
 
 function documentError(countryCode) {
@@ -65,6 +107,16 @@ function documentError(countryCode) {
 }
 
 function populateEmployee(employee) {
+  loadedEmployee = employee;
+  if (currentSessionUser().isGlobalAdmin) {
+    employeeCompany.value = String(employee.companyId);
+  }
+  employeeCompany.disabled = true;
+  employeeTitle.textContent = "Editar Expediente de Empleado";
+  if (employeeCrumbTitle) employeeCrumbTitle.textContent = "Editar Empleado";
+  employeeSave.textContent = "Guardar cambios";
+  applyCountryDocuments(employee.branch);
+
   Object.entries({
     firstName: employee.firstName,
     lastName: employee.lastName,
@@ -83,11 +135,6 @@ function populateEmployee(employee) {
     const field = employeeForm.elements.namedItem(name);
     if (field) field.value = value || "";
   });
-  if (employeeUser.isGlobalAdmin) employeeCompany.value = employee.companyId;
-  employeeCompany.disabled = true;
-  employeeTitle.textContent = "Editar Empleado";
-  employeeSave.textContent = "Guardar cambios";
-  applyCountryDocuments();
   updateInitials();
 }
 
@@ -98,7 +145,7 @@ employeeEmail.addEventListener("blur", () => {
 employeeEmail.addEventListener("input", () => validation.setFieldError(employeeEmail, ""));
 employeeForm.elements.firstName.addEventListener("input", updateInitials);
 employeeForm.elements.lastName.addEventListener("input", updateInitials);
-employeeCompany.addEventListener("change", applyCountryDocuments);
+employeeCompany.addEventListener("change", () => applyCountryDocuments());
 
 employeeForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -141,13 +188,23 @@ employeeForm.addEventListener("submit", async (event) => {
 
 (async function initializeEmployeeForm() {
   try {
+    const user = currentSessionUser();
     employeeCompanies = await window.gestionUserDb.listCompanies();
-    if (employeeUser.isGlobalAdmin) {
-      employeeCompany.innerHTML = employeeCompanies.map((company) => `<option value="${company.id}" ${Number(company.id) === Number(employeeUser.companyId) ? "selected" : ""}>${escapeHtml(company.name)}</option>`).join("");
+    if (user.isGlobalAdmin) {
+      employeeCompany.innerHTML = employeeCompanies
+        .map(
+          (company) =>
+            `<option value="${company.id}" ${Number(company.id) === Number(user.companyId) ? "selected" : ""}>${escapeHtml(company.name)} (${escapeHtml(
+              company.countryCode
+            )})</option>`
+        )
+        .join("");
       employeeCompanyField.hidden = false;
     }
     applyCountryDocuments();
-    if (employeeId) populateEmployee(await window.gestionUserDb.getEmployee(employeeId));
+    if (employeeId) {
+      populateEmployee(await window.gestionUserDb.getEmployee(employeeId));
+    }
   } catch (error) {
     employeeError.textContent = error.message;
     employeeError.hidden = false;

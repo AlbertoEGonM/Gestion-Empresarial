@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion Empresarial | Nuevo Empleado</title>
+    <title>Gestion Empresarial | Expediente de Empleado</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
   </head>
   <body data-admin-only="true">
-    <main class="app-layout" data-node-id="49:541">
+    <main class="app-layout">
       <aside class="sidebar">
         <a class="brand sidebar-brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
         <nav class="side-nav" aria-label="Modulos">
@@ -19,14 +19,14 @@
           <a class="active" href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
-          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
           <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
         </nav>
         <div class="user-box">
-          <div class="avatar">GH</div>
+          <div class="avatar">--</div>
           <div>
-            <strong>gabrielh</strong>
-            <span>Administrador</span>
+            <strong>Usuario</strong>
+            <span>Sesion activa</span>
           </div>
           <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
         </div>
@@ -40,28 +40,22 @@
             <img src="./assets/icons/crumb.svg" alt="" />
             <a href="./empleados.html">Gestion de Empleados</a>
             <img src="./assets/icons/crumb.svg" alt="" />
-            <strong>Registrar Empleado</strong>
+            <strong id="employee-crumb-title">Registrar Empleado</strong>
           </div>
           <div class="topbar-actions">
-            <span>Lunes, 3 de agosto 2026</span>
+            <span id="current-date"></span>
             <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
           </div>
         </header>
 
         <section class="content-area">
           <header class="page-title">
-              <h1 id="employee-form-title">Registrar Nuevo Empleado</h1>
-            <p>Datos personales, documentos y asignacion laboral dentro de la empresa seleccionada.</p>
+            <h1 id="employee-form-title">Registrar Nuevo Empleado</h1>
+            <p id="employee-form-subtitle">Expediente personal, identificacion fiscal y asignacion operativa textil.</p>
           </header>
 
           <form class="employee-form" id="employee-form" novalidate>
-            <aside class="form-card photo-card">
-              <div class="photo-uploader" id="employee-initials">NE</div>
-              <strong>Expediente laboral</strong>
-              <p id="employee-company-name">Empresa seleccionada</p>
-            </aside>
-
-            <section class="form-card">
+            <section class="form-card employee-wide">
               <h2>Informacion Personal</h2>
               <div class="admin-form-grid">
                 <div class="field"><label for="name">Nombres</label><input id="name" name="firstName" type="text" autocomplete="given-name" minlength="2" maxlength="80" required /></div>
@@ -79,21 +73,30 @@
             </section>
 
             <section class="form-card employee-wide">
-              <h2>Documentos Oficiales</h2>
+              <h2 id="employee-docs-heading">Documentos Oficiales (Honduras)</h2>
               <div class="admin-form-grid">
-                <div class="field"><label for="curp">CURP / Identidad</label><input id="curp" name="identityNumber" type="text" autocomplete="off" /></div>
-                <div class="field"><label for="rfc">RFC</label><input id="rfc" name="taxNumber" type="text" autocomplete="off" /></div>
-                <div class="field"><label for="imss">IMSS / Seguro</label><input id="imss" name="socialSecurityNumber" type="text" autocomplete="off" /></div>
+                <div class="field">
+                  <label for="curp" id="label-identity">DNI / Identidad</label>
+                  <input id="curp" name="identityNumber" type="text" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="rfc" id="label-tax">RTN</label>
+                  <input id="rfc" name="taxNumber" type="text" autocomplete="off" />
+                </div>
+                <div class="field">
+                  <label for="imss" id="label-ssn">IHSS / Seguro Social</label>
+                  <input id="imss" name="socialSecurityNumber" type="text" autocomplete="off" />
+                </div>
               </div>
             </section>
 
             <section class="form-card employee-wide">
-              <h2>Datos Laborales</h2>
+              <h2>Asignacion Operativa Textil</h2>
               <div class="admin-form-grid">
-                <div class="field"><label for="position">Puesto</label><input id="position" name="position" type="text" maxlength="120" required /></div>
+                <div class="field"><label for="position">Puesto</label><input id="position" name="position" type="text" maxlength="120" placeholder="Ej. Encargado de Bodega de Rollos" required /></div>
                 <div class="field">
-                  <label for="branch">Sucursal</label>
-                  <select id="branch" name="branch"><option>Bodega Central</option><option>Sucursal Principal</option><option>Oficina Central</option><option>Sucursal San Pedro</option></select>
+                  <label for="branch">Sucursal / Almacen</label>
+                  <select id="branch" name="branch"></select>
                 </div>
                 <div class="field">
                   <label for="role">Area Operativa</label>

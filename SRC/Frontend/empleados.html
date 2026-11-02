@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
   </head>
   <body data-admin-only="true">
     <main class="app-layout">
@@ -19,14 +19,14 @@
           <a class="active" href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
-          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
           <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
         </nav>
         <div class="user-box">
-          <div class="avatar">GH</div>
+          <div class="avatar">--</div>
           <div>
-            <strong>gabrielh</strong>
-            <span>Administrador</span>
+            <strong>Usuario</strong>
+            <span>Sesion activa</span>
           </div>
           <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
         </div>
@@ -42,7 +42,7 @@
             <strong>Gestion de Empleados</strong>
           </div>
           <div class="topbar-actions">
-            <span>Lunes, 3 de agosto 2026</span>
+            <span id="current-date"></span>
             <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
           </div>
         </header>
@@ -51,7 +51,7 @@
           <header class="page-title admin-title">
             <div>
               <h1>Gestion de Empleados</h1>
-              <p>Administra los expedientes, puestos y areas del personal de la empresa seleccionada.</p>
+              <p>Administra los expedientes laborales, sucursales y roles operativos del personal textil.</p>
             </div>
             <a class="primary-action" href="./empleado.html">+ Nuevo Empleado</a>
           </header>
@@ -67,7 +67,7 @@
             <div class="employee-toolbar">
               <label class="search-control" for="employee-search">
                 <img src="./assets/icons/inventory-search.svg" alt="" />
-                <input id="employee-search" type="search" placeholder="Buscar por nombre, puesto o rol..." />
+                <input id="employee-search" type="search" placeholder="Buscar por nombre, correo, puesto o sucursal..." />
               </label>
               <label class="employee-filter" id="employee-company-filter" hidden>
                 <span>Empresa</span>
@@ -79,7 +79,7 @@
               </label>
             </div>
             <div class="employee-table" id="employee-table" aria-live="polite">
-              <div class="employee-row head"><span>Empleado</span><span>Puesto</span><span>Sucursal</span><span>Area</span><span>Acciones</span></div>
+              <div class="employee-row head"><span>Empleado</span><span>Puesto</span><span>Sucursal / Almacen</span><span>Area Operativa</span><span>Acciones</span></div>
               <div class="employee-empty" id="employee-loading">Cargando empleados...</div>
             </div>
             <p class="module-toast" id="employee-message" role="status" hidden></p>
@@ -90,8 +90,8 @@
 
     <dialog class="confirm-dialog" id="delete-employee-dialog" aria-labelledby="delete-employee-title">
       <form method="dialog" class="confirm-dialog-card" id="delete-employee-form">
-        <header><img src="./assets/icons/inventory-delete.svg" alt="" /><div><h2 id="delete-employee-title">Eliminar empleado</h2><p id="delete-employee-description">Esta accion retirara el expediente del listado activo.</p></div></header>
-        <p class="confirm-dialog-note">La cuenta de acceso, si existe, se administra por separado desde solicitudes y usuarios.</p>
+        <header><img src="./assets/icons/inventory-delete.svg" alt="" /><div><h2 id="delete-employee-title">Dar de baja empleado</h2><p id="delete-employee-description">Esta accion retirara el expediente del listado activo.</p></div></header>
+        <p class="confirm-dialog-note">La cuenta de acceso al sistema, si existe, se administra por separado desde el panel de usuarios.</p>
         <div class="field"><label for="delete-employee-confirmation">Escribe <strong>ELIMINAR</strong> para confirmar</label><input id="delete-employee-confirmation" autocomplete="off" required /></div>
         <p class="input-error" id="delete-employee-error" role="alert" hidden></p>
         <div class="confirm-dialog-actions"><button class="secondary-action" value="cancel" type="button" id="cancel-delete-employee">Cancelar</button><button class="danger-action" type="submit">Eliminar empleado</button></div>

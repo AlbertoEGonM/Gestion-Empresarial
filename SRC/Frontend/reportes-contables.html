@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=7" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
     <style id="report-page-size">@page { size: A4 portrait; margin: 10mm; }</style>
   </head>
   <body>
@@ -20,10 +20,10 @@
           <a href="./admin.html" data-module="administrador"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
-          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
           <a class="active" href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
         </nav>
-        <div class="user-box"><div class="avatar">GH</div><div><strong>gabrielh</strong><span>Administrador</span></div><a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a></div>
+        <div class="user-box"><div class="avatar">--</div><div><strong>Usuario</strong><span>Sesion activa</span></div><a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a></div>
       </aside>
       <section class="workspace">
         <header class="topbar report-topbar">
@@ -31,7 +31,7 @@
           <div class="topbar-actions"><span id="current-date"></span><a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a></div>
         </header>
         <section class="content-area accounting-report-content">
-          <header class="page-title report-page-heading"><div><h1>Documentos Contables</h1><p>Genera estados y documentos operativos con datos separados por empresa y periodo.</p></div></header>
+          <header class="page-title report-page-heading"><div><h1>Generador de Documentos Contables</h1><p>Estados financieros y reportes fiscales por empresa textil y periodo contable.</p></div></header>
           <section class="report-controls" aria-label="Parametros del documento">
             <label><span>Documento</span><select id="report-type"><option value="income-statement">Estado de resultados</option><option value="balance-sheet">Balance general</option><option value="trial-balance">Balanza de comprobacion</option><option value="payroll-catalog">Percepciones y deducciones</option><option value="sales-profit">Ventas y utilidad</option><option value="purchase-invoice">Factura de compra</option></select></label>
             <label><span>Periodo</span><input id="report-period" type="month" value="2026-01" /></label>

@@ -1,5 +1,7 @@
--- Esquema PostgreSQL para Supabase. Ejecuta el archivo completo en SQL Editor.
--- La API usa una conexion PostgreSQL de servidor; nunca expongas SUPABASE_DB_URL en el frontend.
+-- ==============================================================================
+-- Esquema PostgreSQL Endurecido (DevSecOps) para Supabase.
+-- Incluye: Tablas Multi-tenant, Indices, Auditoria, Separacion de Privilegios y RLS.
+-- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS companies (
     id SERIAL PRIMARY KEY,
@@ -110,9 +112,10 @@ CREATE TABLE IF NOT EXISTS employees (
     birth_date DATE,
     birth_place VARCHAR(120),
     gender VARCHAR(30) NOT NULL DEFAULT 'No especificado',
-    identity_number VARCHAR(40),
-    tax_number VARCHAR(40),
-    social_security_number VARCHAR(40),
+    identity_number VARCHAR(255),
+    tax_number VARCHAR(255),
+    social_security_number VARCHAR(255),
+    identity_blind_index VARCHAR(100),
     position VARCHAR(120) NOT NULL,
     branch VARCHAR(120) NOT NULL,
     system_role VARCHAR(40) NOT NULL DEFAULT 'Empleado',
@@ -201,15 +204,23 @@ CREATE TABLE IF NOT EXISTS purchase_invoice_lines (
     line_total DECIMAL(18, 2) NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS security_audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    company_id INT NULL,
+    user_id INT NULL,
+    action VARCHAR(80) NOT NULL,
+    severity VARCHAR(20) NOT NULL DEFAULT 'INFO',
+    ip_address VARCHAR(80) NULL,
+    details_json TEXT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_users_company ON users (company_id);
-
 CREATE INDEX IF NOT EXISTS idx_registration_status_company ON registration_requests (status, company_id);
-
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions (user_id, expires_at);
-
 CREATE INDEX IF NOT EXISTS idx_employee_company_status ON employees (company_id, status);
-
 CREATE INDEX IF NOT EXISTS idx_purchase_invoice_lines ON purchase_invoice_lines (invoice_id);
+CREATE INDEX IF NOT EXISTS idx_security_audit_company_date ON security_audit_logs (company_id, created_at DESC);
 
 INSERT INTO
     companies (
@@ -277,3 +288,197 @@ SET
     name = EXCLUDED.name,
     legal_name = EXCLUDED.legal_name,
     tax_id = EXCLUDED.tax_id;
+
+-- ==============================================================================
+-- PUNTO 3: SEPARACION DE PRIVILEGIOS (ROL DE APLICACION DE MINIMO PRIVILEGIO)
+-- ==============================================================================
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_backend_user') THEN
+        CREATE ROLE app_backend_user NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS;
+    END IF;
+END
+$$;
+
+GRANT USAGE ON SCHEMA public TO app_backend_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_backend_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_backend_user;
+
+-- ==============================================================================
+-- PUNTO 4: ROW LEVEL SECURITY (RLS) ESTRICTO EN TODAS LAS TABLAS DE SUPABASE
+-- ==============================================================================
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE companies FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE registration_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE registration_requests FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE auth_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE auth_sessions FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE password_recovery_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE password_recovery_tokens FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE business_datasets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_datasets FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE business_serial_sequences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE business_serial_sequences FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE employees FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE accounting_balances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accounting_balances FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE payroll_concepts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payroll_concepts FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE sales_profit_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales_profit_lines FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE purchase_invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchase_invoices FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE purchase_invoice_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE purchase_invoice_lines FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE security_audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE security_audit_logs FORCE ROW LEVEL SECURITY;
+
+-- Politicas RLS:
+-- 1. companies: lectura de empresas activas permitida al servicio backend
+DROP POLICY IF EXISTS rls_companies_isolation ON companies;
+CREATE POLICY rls_companies_isolation ON companies
+    FOR ALL
+    USING (
+        current_user IN ('postgres', 'app_backend_user')
+        OR current_setting('app.backend_service', true) = 'true'
+    );
+
+-- 2. Tablas con aislamiento estricto por company_id
+DROP POLICY IF EXISTS rls_users_tenant_isolation ON users;
+CREATE POLICY rls_users_tenant_isolation ON users
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+        OR current_setting('app.is_global_admin', true) = 'true'
+        OR company_id = NULLIF(current_setting('app.current_company_id', true), '')::INT
+    );
+
+DROP POLICY IF EXISTS rls_registration_requests_isolation ON registration_requests;
+CREATE POLICY rls_registration_requests_isolation ON registration_requests
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+        OR current_setting('app.is_global_admin', true) = 'true'
+        OR company_id = NULLIF(current_setting('app.current_company_id', true), '')::INT
+    );
+
+DROP POLICY IF EXISTS rls_auth_sessions_backend_only ON auth_sessions;
+CREATE POLICY rls_auth_sessions_backend_only ON auth_sessions
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+    );
+
+DROP POLICY IF EXISTS rls_recovery_tokens_backend_only ON password_recovery_tokens;
+CREATE POLICY rls_recovery_tokens_backend_only ON password_recovery_tokens
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+    );
+
+DROP POLICY IF EXISTS rls_business_datasets_isolation ON business_datasets;
+CREATE POLICY rls_business_datasets_isolation ON business_datasets
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+        OR current_setting('app.is_global_admin', true) = 'true'
+        OR company_id = NULLIF(current_setting('app.current_company_id', true), '')::INT
+    );
+
+DROP POLICY IF EXISTS rls_serial_sequences_isolation ON business_serial_sequences;
+CREATE POLICY rls_serial_sequences_isolation ON business_serial_sequences
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+        OR current_setting('app.is_global_admin', true) = 'true'
+        OR company_id = NULLIF(current_setting('app.current_company_id', true), '')::INT
+    );
+
+DROP POLICY IF EXISTS rls_employees_isolation ON employees;
+CREATE POLICY rls_employees_isolation ON employees
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+        OR current_setting('app.is_global_admin', true) = 'true'
+        OR company_id = NULLIF(current_setting('app.current_company_id', true), '')::INT
+    );
+
+DROP POLICY IF EXISTS rls_accounting_balances_isolation ON accounting_balances;
+CREATE POLICY rls_accounting_balances_isolation ON accounting_balances
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+        OR current_setting('app.is_global_admin', true) = 'true'
+        OR company_id = NULLIF(current_setting('app.current_company_id', true), '')::INT
+    );
+
+DROP POLICY IF EXISTS rls_payroll_concepts_isolation ON payroll_concepts;
+CREATE POLICY rls_payroll_concepts_isolation ON payroll_concepts
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+        OR current_setting('app.is_global_admin', true) = 'true'
+        OR company_id = NULLIF(current_setting('app.current_company_id', true), '')::INT
+    );
+
+DROP POLICY IF EXISTS rls_sales_profit_lines_isolation ON sales_profit_lines;
+CREATE POLICY rls_sales_profit_lines_isolation ON sales_profit_lines
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+        OR current_setting('app.is_global_admin', true) = 'true'
+        OR company_id = NULLIF(current_setting('app.current_company_id', true), '')::INT
+    );
+
+DROP POLICY IF EXISTS rls_purchase_invoices_isolation ON purchase_invoices;
+CREATE POLICY rls_purchase_invoices_isolation ON purchase_invoices
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+        OR current_setting('app.is_global_admin', true) = 'true'
+        OR company_id = NULLIF(current_setting('app.current_company_id', true), '')::INT
+    );
+
+DROP POLICY IF EXISTS rls_purchase_invoice_lines_isolation ON purchase_invoice_lines;
+CREATE POLICY rls_purchase_invoice_lines_isolation ON purchase_invoice_lines
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+    );
+
+DROP POLICY IF EXISTS rls_security_audit_logs_isolation ON security_audit_logs;
+CREATE POLICY rls_security_audit_logs_isolation ON security_audit_logs
+    FOR ALL
+    USING (
+        current_user = 'postgres'
+        OR current_setting('app.backend_service', true) = 'true'
+        OR current_setting('app.is_global_admin', true) = 'true'
+    );

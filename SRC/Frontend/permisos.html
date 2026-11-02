@@ -7,10 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=9" />
   </head>
   <body data-admin-only="true">
-    <main class="app-layout" data-node-id="52:1179">
+    <main class="app-layout">
       <aside class="sidebar">
         <a class="brand sidebar-brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
         <nav class="side-nav" aria-label="Modulos">
@@ -19,14 +19,14 @@
           <a class="active" href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
-          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
           <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
         </nav>
         <div class="user-box">
-          <div class="avatar">GH</div>
+          <div class="avatar">--</div>
           <div>
-            <strong>gabrielh</strong>
-            <span>Administrador</span>
+            <strong>Usuario</strong>
+            <span>Sesion activa</span>
           </div>
           <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
         </div>
@@ -38,46 +38,55 @@
             <img src="./assets/icons/crumb.svg" alt="" />
             <a href="./admin.html">Administracion</a>
             <img src="./assets/icons/crumb.svg" alt="" />
-            <strong>Roles y Privilegios</strong>
+            <strong>Roles y Privilegios RBAC</strong>
           </div>
           <div class="topbar-actions">
-            <span>Lunes, 3 de agosto 2026</span>
+            <span id="current-date"></span>
             <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
           </div>
         </header>
         <section class="content-area">
           <header class="page-title">
-            <h1>Roles y Privilegios</h1>
-            <p>Permisos por usuario y modulo para la operacion textil.</p>
+            <h1>Roles y Privilegios Operativos</h1>
+            <p>Personaliza los permisos de cada trabajador por modulo, accion (Consultar, Registrar, Editar, Eliminar) y seccion especifica.</p>
           </header>
           <section class="permission-layout">
             <aside class="employee-list">
-              <h2>Empleados</h2>
-              <button class="active" type="button"><strong>Gabriel Hernandez</strong><span>Administrador</span></button>
-              <button type="button"><strong>Mariana Lopez</strong><span>Inventarios</span></button>
-              <button type="button"><strong>Ana Ruiz</strong><span>Contabilidad</span></button>
-              <button type="button"><strong>Carlos Mejia</strong><span>Ventas</span></button>
+              <h2>Personal Activo</h2>
+              <div id="permission-employee-list">
+                <p class="employee-empty">Cargando empleados...</p>
+              </div>
             </aside>
             <section class="permission-matrix">
               <div class="matrix-heading">
                 <div>
-                  <h2>Permisos de Gabriel Hernandez</h2>
-                  <p>Activa o desactiva acceso a modulos clave.</p>
+                  <h2 id="permission-employee-title">Selecciona un empleado</h2>
+                  <p id="permission-employee-subtitle">Elige una plantilla de rol o activa/desactiva permisos individuales para este trabajador.</p>
                 </div>
-                <button class="submit-button save-record" type="button">Guardar</button>
+                <div class="permission-role-controls">
+                  <label class="employee-filter" for="permission-role-select">
+                    <span>Rol Base (Plantilla)</span>
+                    <select id="permission-role-select" disabled>
+                      <option value="Empleado">Empleado</option>
+                      <option value="Inventarios">Inventarios</option>
+                      <option value="Compras">Compras</option>
+                      <option value="Ventas">Ventas</option>
+                      <option value="Contabilidad">Contabilidad</option>
+                    </select>
+                  </label>
+                  <button class="submit-button save-record" id="permission-save-btn" type="button" disabled>Guardar permisos</button>
+                </div>
               </div>
-              <div class="matrix-row head"><span>Modulo</span><span>Ver</span><span>Crear</span><span>Editar</span><span>Eliminar</span></div>
-              <div class="matrix-row"><strong>Inventario de Telas</strong><span class="toggle on"></span><span class="toggle on"></span><span class="toggle on"></span><span class="toggle off"></span></div>
-              <div class="matrix-row"><strong>Compras de Telas</strong><span class="toggle on"></span><span class="toggle on"></span><span class="toggle on"></span><span class="toggle off"></span></div>
-              <div class="matrix-row"><strong>Facturacion / Ventas</strong><span class="toggle on"></span><span class="toggle on"></span><span class="toggle on"></span><span class="toggle off"></span></div>
-              <div class="matrix-row"><strong>Catalogos Textiles</strong><span class="toggle on"></span><span class="toggle on"></span><span class="toggle on"></span><span class="toggle on"></span></div>
-              <div class="matrix-row"><strong>Bitacora</strong><span class="toggle on"></span><span class="toggle off"></span><span class="toggle off"></span><span class="toggle off"></span></div>
+              <div class="matrix-row head"><span>Modulo y Secciones Permitidas</span><span>Consultar</span><span>Registrar</span><span>Editar</span><span>Eliminar</span></div>
+              <div id="permission-matrix-rows"></div>
             </section>
           </section>
+          <p class="module-toast" id="permission-toast" role="status" aria-live="polite" hidden></p>
         </section>
       </section>
     </main>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/permisos.js"></script>
   </body>
 </html>

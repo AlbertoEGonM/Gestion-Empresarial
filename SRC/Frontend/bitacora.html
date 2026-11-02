@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion Empresarial | Bitacora</title>
+    <title>Gestion Empresarial | Bitacora de Auditoria</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
   </head>
   <body data-admin-only="true">
-    <main class="app-layout" data-node-id="52:1866">
+    <main class="app-layout">
       <aside class="sidebar">
         <a class="brand sidebar-brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
         <nav class="side-nav" aria-label="Modulos">
@@ -19,14 +19,14 @@
           <a class="active" href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
-          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
           <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
         </nav>
         <div class="user-box">
-          <div class="avatar">GH</div>
+          <div class="avatar">--</div>
           <div>
-            <strong>gabrielh</strong>
-            <span>Administrador</span>
+            <strong>Usuario</strong>
+            <span>Sesion activa</span>
           </div>
           <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
         </div>
@@ -38,36 +38,42 @@
             <img src="./assets/icons/crumb.svg" alt="" />
             <a href="./admin.html">Administracion</a>
             <img src="./assets/icons/crumb.svg" alt="" />
-            <strong>Bitacora</strong>
+            <strong>Bitacora de Auditoria</strong>
           </div>
           <div class="topbar-actions">
-            <span>Lunes, 3 de agosto 2026</span>
+            <span id="current-date"></span>
             <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
           </div>
         </header>
         <section class="content-area">
           <header class="page-title admin-title">
             <div>
-              <h1>Registro de Actividad del Sistema</h1>
-              <p>Auditoria completa de acciones realizadas en el sistema.</p>
+              <h1>Bitacora de Actividad y Seguridad</h1>
+              <p>Trazabilidad en tiempo real de inicios de sesion, autorizaciones, cambios de inventario textil y expedientes.</p>
             </div>
-            <button class="filter-button" type="button">Exportar CSV</button>
+            <button class="secondary-action" id="audit-export-csv" type="button">Exportar CSV</button>
           </header>
           <section class="audit-panel">
             <div class="catalog-toolbar">
               <label class="search-control" for="audit-search">
                 <img src="./assets/icons/inventory-search.svg" alt="" />
-                <input id="audit-search" type="search" placeholder="Buscar usuario, modulo o accion..." />
+                <input id="audit-search" type="search" placeholder="Buscar por usuario, evento, modulo o IP..." />
               </label>
-              <button class="filter-button" type="button"><img src="./assets/icons/inventory-filter.svg" alt="" />Filtrar</button>
+              <label class="employee-filter" for="audit-severity">
+                <span>Nivel</span>
+                <select id="audit-severity">
+                  <option value="">Todos los niveles</option>
+                  <option value="INFO">Operativo (INFO)</option>
+                  <option value="WARN">Alerta (WARN)</option>
+                  <option value="HIGH">Critico (HIGH)</option>
+                </select>
+              </label>
             </div>
             <div class="audit-table">
-              <div class="audit-row head"><span>Accion</span><span>Modulo</span><span>Usuario</span><span>Fecha</span><span>Resultado</span></div>
-              <div class="audit-row"><strong>Ingreso de rollos TELA-00142 registrado</strong><span>Inventarios</span><span>mlopez</span><span>03/08/2026 09:42</span><b class="status complete">Exito</b></div>
-              <div class="audit-row"><strong>Permisos actualizados para Mariana Lopez</strong><span>Administrador</span><span>gabrielh</span><span>03/08/2026 09:15</span><b class="status complete">Exito</b></div>
-              <div class="audit-row"><strong>Venta de popelina floral facturada</strong><span>Facturacion</span><span>cmejia</span><span>03/08/2026 08:58</span><b class="status complete">Exito</b></div>
-              <div class="audit-row"><strong>Categoria Gabardina modificada</strong><span>Catalogos</span><span>gabrielh</span><span>03/08/2026 08:31</span><b class="status pending">Revision</b></div>
-              <div class="audit-row"><strong>Intento de eliminar color sin permisos</strong><span>Catalogos</span><span>aruiz</span><span>02/08/2026 17:22</span><b class="status pending">Bloqueado</b></div>
+              <div class="audit-row head"><span>Evento registrado</span><span>Modulo / Origen</span><span>Usuario</span><span>Fecha y hora</span><span>Nivel</span></div>
+              <div id="audit-rows">
+                <div class="employee-empty">Cargando bitacora del sistema...</div>
+              </div>
             </div>
           </section>
         </section>
@@ -75,5 +81,6 @@
     </main>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/bitacora.js"></script>
   </body>
 </html>

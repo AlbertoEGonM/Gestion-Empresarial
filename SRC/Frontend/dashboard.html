@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion Empresarial | Dashboard</title>
+    <title>Gestion Empresarial | Panel Operativo Textil</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
   </head>
   <body>
-    <main class="app-layout" data-node-id="1:669">
+    <main class="app-layout">
       <aside class="sidebar">
         <a class="brand sidebar-brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
         <nav class="side-nav" aria-label="Modulos">
@@ -19,14 +19,14 @@
           <a href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
-          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
           <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
         </nav>
         <div class="user-box">
-          <div class="avatar">GH</div>
+          <div class="avatar">--</div>
           <div>
-            <strong>gabrielh</strong>
-            <span>Administrador</span>
+            <strong>Usuario</strong>
+            <span>Sesion activa</span>
           </div>
           <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
         </div>
@@ -36,41 +36,58 @@
           <div class="breadcrumbs">
             <a href="./dashboard.html">Inicio</a>
             <img src="./assets/icons/crumb.svg" alt="" />
-            <strong>Panel de Administracion</strong>
+            <strong>Centro Operativo Textil</strong>
           </div>
           <div class="topbar-actions">
-            <span>Lunes, 3 de agosto 2026</span>
+            <span id="current-date"></span>
             <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
           </div>
         </header>
 
         <section class="content-area">
           <header class="page-title">
-            <h1>Panel de Administracion</h1>
-            <p>Acceso rapido a los modulos del sistema.</p>
+            <h1>Centro de Operaciones Textiles</h1>
+            <p>Selecciona un modulo operativo segun los privilegios asignados a tu perfil en <strong data-session-company>la empresa activa</strong>.</p>
           </header>
 
           <div class="module-grid">
-            <a class="module-card" href="./admin.html"><img src="./assets/icons/admin.svg" alt="" /><strong>Administrador</strong><span>Gestion de empleados, roles y catalogos textiles.</span><small>24 usuarios activos</small></a>
-            <a class="module-card" href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" /><strong>Compras</strong><span>Compras de telas, proveedores y seguimiento.</span><small>3 ordenes pendientes</small></a>
-            <a class="module-card" href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" /><strong>Facturacion / Ventas</strong><span>Ventas de telas, facturas y pedidos.</span><small>12 facturas este mes</small></a>
-            <a class="module-card" href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" /><strong>Inventarios</strong><span>Control de rollos, metros, colores y movimientos.</span><small>1,840 rollos</small></a>
-            <a class="module-card" href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" /><strong>Contabilidad</strong><span>Mayor general, cierres contables y reportes.</span><small>Cierre al dia</small></a>
+            <a class="module-card" href="./admin.html" data-module="administrador">
+              <img src="./assets/icons/admin.svg" alt="" />
+              <strong>Administrador</strong>
+              <span>Autorizacion de cuentas, expedientes de personal, roles RBAC y catalogos textiles.</span>
+              <small>Gestion corporativa</small>
+            </a>
+            <a class="module-card" href="./modulo.html?modulo=compras" data-module="compras">
+              <img src="./assets/icons/compras.svg" alt="" />
+              <strong>Compras e Importaciones</strong>
+              <span>Proveedores textiles, requisiciones, ordenes de compra y recepcion de lotes.</span>
+              <small>Abastecimiento textil</small>
+            </a>
+            <a class="module-card" href="./modulo.html?modulo=ventas" data-module="ventas">
+              <img src="./assets/icons/ventas.svg" alt="" />
+              <strong>Facturacion / Ventas</strong>
+              <span>Clientes mayoristas, proformas, pedidos de corte, facturacion y punto de venta.</span>
+              <small>Comercializacion</small>
+            </a>
+            <a class="module-card" href="./modulo.html?modulo=inventarios" data-module="inventarios">
+              <img src="./assets/icons/inventarios.svg" alt="" />
+              <strong>Inventarios de Telas</strong>
+              <span>Catalogo de rollos y metros, ordenes de produccion, kardex, almacenes y lotes.</span>
+              <small>Control de existencias</small>
+            </a>
+            <a class="module-card" href="./modulo.html?modulo=contabilidad" data-module="contabilidad">
+              <img src="./assets/icons/contabilidad.svg" alt="" />
+              <strong>Contabilidad y Finanzas</strong>
+              <span>Polizas contables, conciliacion bancaria, cierres mensuales y estados financieros.</span>
+              <small>Control financiero</small>
+            </a>
+            <a class="module-card" href="./modulo.html?modulo=costos" data-module="costos">
+              <img src="./assets/icons/costos.svg" alt="" />
+              <strong>Costos y Margenes</strong>
+              <span>Costeo por metro/rollo, hojas de costo de importacion y politicas de margen.</span>
+              <small>Rentabilidad por tela</small>
+            </a>
           </div>
-
-          <section class="activity-panel">
-            <div class="section-heading">
-              <h2>Actividad Reciente</h2>
-              <a href="./bitacora.html">Ver todo -></a>
-            </div>
-            <div class="activity-table">
-              <div class="activity-head"><span>Accion</span><span>Modulo</span><span>Usuario</span><span>Hora</span><span>Estado</span></div>
-              <div class="activity-row"><span>Venta #V-2024-0891 de popelina emitida</span><span>Facturacion</span><span>gabrielh</span><span>Hace 4 min</span><b class="status complete"><img src="./assets/icons/complete.svg" alt="" />Completado</b></div>
-              <div class="activity-row"><span>Orden de tela OC-0234 enviada</span><span>Compras</span><span>mlopez</span><span>Hace 18 min</span><b class="status pending"><img src="./assets/icons/pending.svg" alt="" />Pendiente</b></div>
-              <div class="activity-row"><span>Ajuste de rollos - Almacen de Telas</span><span>Inventarios</span><span>gabrielh</span><span>Hace 41 min</span><b class="status complete"><img src="./assets/icons/complete.svg" alt="" />Completado</b></div>
-              <div class="activity-row"><span>Cierre de periodo junio - en proceso</span><span>Contabilidad</span><span>aruiz</span><span>Hace 2 h</span><b class="status processing"><img src="./assets/icons/processing.svg" alt="" />Procesando</b></div>
-            </div>
-          </section>
         </section>
       </section>
     </main>

@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion Empresarial | Catalogos</title>
+    <title>Gestion Empresarial | Catalogos Textiles</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=4" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
   </head>
   <body data-admin-only="true">
-    <main class="app-layout" data-node-id="52:1590">
+    <main class="app-layout">
       <aside class="sidebar">
         <a class="brand sidebar-brand" href="./dashboard.html">Gestion Empresarial<span>.</span></a>
         <nav class="side-nav" aria-label="Modulos">
@@ -19,14 +19,14 @@
           <a class="active" href="./admin.html"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
           <a href="./modulo.html?modulo=compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
-          <a href="./inventario.html"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
           <a href="./modulo.html?modulo=contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
         </nav>
         <div class="user-box">
-          <div class="avatar">GH</div>
+          <div class="avatar">--</div>
           <div>
-            <strong>gabrielh</strong>
-            <span>Administrador</span>
+            <strong>Usuario</strong>
+            <span>Sesion activa</span>
           </div>
           <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
         </div>
@@ -38,25 +38,25 @@
             <img src="./assets/icons/crumb.svg" alt="" />
             <a href="./admin.html">Administracion</a>
             <img src="./assets/icons/crumb.svg" alt="" />
-            <strong>Catalogos del Sistema</strong>
+            <strong>Catalogos Textiles</strong>
           </div>
           <div class="topbar-actions">
-            <span>Lunes, 3 de agosto 2026</span>
+            <span id="current-date"></span>
             <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
           </div>
         </header>
         <section class="content-area">
           <header class="page-title admin-title">
             <div>
-              <h1>Catalogos del Sistema</h1>
-              <p>Gestiona los valores de referencia utilizados en todo el sistema.</p>
+              <h1>Catalogos Maestros Textiles</h1>
+              <p>Familias de telas, unidades de comercializacion (rollos, metros, yardas) y carta de colores por empresa.</p>
             </div>
           </header>
           <section class="catalog-panel">
             <div class="catalog-tabs">
               <button class="active" type="button" data-catalog="categorias">Categorias de Telas</button>
               <button type="button" data-catalog="unidades">Unidades de Medida</button>
-              <button type="button" data-catalog="colores">Colores</button>
+              <button type="button" data-catalog="colores">Carta de Colores</button>
             </div>
             <div class="catalog-toolbar">
               <label class="search-control" for="catalog-search">
@@ -64,7 +64,7 @@
                 <input id="catalog-search" type="search" placeholder="Buscar categoria..." />
               </label>
               <div class="catalog-actions">
-                <span id="catalog-count">7 registros</span>
+                <span id="catalog-count">0 registros</span>
                 <button class="primary-action" id="catalog-new" type="button">+ Nueva Categoria</button>
               </div>
             </div>
@@ -72,22 +72,22 @@
               <div class="catalog-form-heading">
                 <div>
                   <h2 id="catalog-form-title">Nueva Categoria</h2>
-                  <p id="catalog-form-help">Registra un valor para utilizarlo en inventarios y compras.</p>
+                  <p id="catalog-form-help">Registra un valor para utilizarlo en inventarios, lotes y compras textiles.</p>
                 </div>
                 <button class="icon-close" id="catalog-cancel" type="button" aria-label="Cerrar formulario">x</button>
               </div>
               <div class="catalog-form-grid">
                 <div class="field">
                   <label for="catalog-name">Nombre</label>
-                  <input id="catalog-name" type="text" placeholder="Ej. Gabardina" required />
+                  <input id="catalog-name" type="text" placeholder="Ej. Gabardina" maxlength="80" required />
                 </div>
                 <div class="field color-code-field" id="color-code-field" hidden>
-                  <label for="catalog-color">Codigo HTML</label>
+                  <label for="catalog-color">Codigo Hexadecimal</label>
                   <div class="color-code-control">
                     <i class="color-preview" id="color-preview"></i>
                     <input id="catalog-color" type="text" placeholder="#1B2A4A" maxlength="7" />
                   </div>
-                  <small>Usa formato hexadecimal, por ejemplo #B22222.</small>
+                  <small>Formato hexadecimal de 6 digitos (ej. #B22222).</small>
                 </div>
                 <div class="field">
                   <label for="catalog-status">Estatus</label>
@@ -97,26 +97,27 @@
                   </select>
                 </div>
                 <div class="field catalog-description-field">
-                  <label for="catalog-description">Descripcion</label>
-                  <textarea id="catalog-description" placeholder="Describe el uso dentro del sistema..." required></textarea>
+                  <label for="catalog-description">Descripcion tecnica</label>
+                  <textarea id="catalog-description" placeholder="Composicion, gramaje o aplicacion textil..." maxlength="300" required></textarea>
                 </div>
               </div>
-              <p class="field-alert" id="catalog-error" hidden>Completa los campos requeridos con un codigo de color valido.</p>
+              <p class="field-alert" id="catalog-error" hidden>Completa todos los campos requeridos con un codigo hexadecimal valido.</p>
               <div class="catalog-form-actions">
                 <button class="secondary-action" id="catalog-clear" type="button">Limpiar</button>
-                <button class="submit-button save-record" type="submit">Guardar</button>
+                <button class="submit-button save-record" id="catalog-submit" type="submit">Guardar</button>
               </div>
             </form>
             <div class="catalog-table">
-              <div class="catalog-row head"><span>Nombre</span><span>Descripcion</span><span>Estatus</span><span>Acciones</span></div>
+              <div class="catalog-row head"><span>Nombre</span><span>Descripcion tecnica</span><span>No. de serie</span><span>Estatus</span><span>Acciones</span></div>
               <div id="catalog-rows"></div>
             </div>
           </section>
+          <p class="module-toast" id="catalog-toast" role="status" aria-live="polite" hidden></p>
         </section>
       </section>
     </main>
-    <script src="./assets/js/catalogos.js"></script>
     <script src="./assets/js/user-db.js"></script>
     <script src="./assets/js/session.js"></script>
+    <script src="./assets/js/catalogos.js"></script>
   </body>
 </html>

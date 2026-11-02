@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestion Empresarial | Modulo</title>
+    <title>Gestion Empresarial | Modulo Operativo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./assets/css/styles.css?v=7" />
+    <link rel="stylesheet" href="./assets/css/styles.css?v=8" />
   </head>
   <body>
     <main class="app-layout">
@@ -19,12 +19,12 @@
           <a href="./admin.html" data-module="administrador"><img src="./assets/icons/admin.svg" alt="" />Administrador</a>
           <a href="./modulo.html?modulo=compras" data-module="compras"><img src="./assets/icons/compras.svg" alt="" />Compras</a>
           <a href="./modulo.html?modulo=ventas" data-module="ventas"><img src="./assets/icons/ventas.svg" alt="" />Facturacion / Ventas</a>
-          <a href="./inventario.html" data-module="inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
+          <a href="./modulo.html?modulo=inventarios" data-module="inventarios"><img src="./assets/icons/inventarios.svg" alt="" />Inventarios</a>
           <a href="./modulo.html?modulo=contabilidad" data-module="contabilidad"><img src="./assets/icons/contabilidad.svg" alt="" />Contabilidad</a>
         </nav>
         <div class="user-box">
-          <div class="avatar">GH</div>
-          <div><strong>gabrielh</strong><span>Administrador</span></div>
+          <div class="avatar">--</div>
+          <div><strong>Usuario</strong><span>Sesion activa</span></div>
           <a class="logout" href="./login.html" aria-label="Cerrar sesion"><img src="./assets/icons/logout.svg" alt="" /></a>
         </div>
       </aside>
@@ -37,14 +37,14 @@
             <strong id="crumb-title">Modulo</strong>
           </div>
           <div class="topbar-actions">
-            <span id="current-date">14 de agosto 2026</span>
+            <span id="current-date"></span>
             <a href="./modulo.html?modulo=ayuda"><img src="./assets/icons/help.svg" alt="" />Ayuda</a>
           </div>
         </header>
 
         <section class="content-area module-content-area">
           <header class="page-title module-page-title">
-            <div><h1 id="module-title">Modulo</h1><p id="module-description">Vista operativa del sistema.</p></div>
+            <div><h1 id="module-title">Modulo</h1><p id="module-description">Vista operativa del sistema textil.</p></div>
             <button class="primary-action module-primary-action" id="module-primary-action" type="button" hidden></button>
           </header>
 

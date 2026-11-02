@@ -1,13 +1,16 @@
 {
   "name": "gestion-empresarial-backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check config/db.js && node --check config/connection.js && node --check config/connection-errors.js && node --check config/permissions.js && node --check modules/records.js && node --check modules/accounting.js && node --check modules/employees.js",
-    "test": "node --test test/*.test.js"
+    "check": "node --check server.js && node --check config/env.js && node --check config/crypto-fields.js && node --check config/validator.js && node --check config/file-security.js && node --check config/security.js && node --check config/audit.js && node --check config/db.js && node --check config/connection.js && node --check config/connection-errors.js && node --check config/permissions.js && node --check modules/records.js && node --check modules/accounting.js && node --check modules/employees.js",
+    "test": "node --test test/*.test.js",
+    "test:security": "node --test test/security.test.js",
+    "security:audit": "npm audit --audit-level=high"
   },
   "dependencies": {
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "pg-mem": "^3.0.14"
   }
 }

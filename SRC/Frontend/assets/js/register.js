@@ -9,7 +9,18 @@ const passwordInput = document.querySelector("#password");
 const togglePasswordButton = document.querySelector("#toggle-password");
 const signupForm = document.querySelector("#signup-form");
 const registerAlert = document.querySelector("#register-alert");
+const honeypotInput = document.querySelector("#website_url");
 const { emailError, normalizeEmail, passwordError, setFieldError } = window.gestionValidation;
+const formRenderedAt = Date.now();
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
 function normalizeUsernamePart(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
@@ -31,7 +42,7 @@ async function loadCompanies() {
   try {
     const companies = await window.gestionUserDb.listCompanies();
     companyInput.innerHTML = '<option value="">Selecciona una empresa</option>' + companies.map((company) =>
-      `<option value="${company.id}">${company.name}</option>`
+      `<option value="${escapeHtml(company.id)}">${escapeHtml(company.name)}</option>`
     ).join("");
     companyInput.disabled = false;
   } catch (error) {
@@ -84,6 +95,8 @@ signupForm.addEventListener("submit", async (event) => {
       companyId: Number(companyInput.value),
       role: roleInput.value,
       username: usernameInput.value,
+      website_url: honeypotInput ? honeypotInput.value : "",
+      _form_ts: formRenderedAt,
     });
     sessionStorage.setItem("gestionUser", usernameInput.value);
     showRegisterAlert("Solicitud enviada. El administrador validara tu empresa y area antes de habilitar el acceso.", true);
@@ -98,4 +111,3 @@ signupForm.addEventListener("submit", async (event) => {
 });
 
 loadCompanies();
-updateGeneratedUsername();
