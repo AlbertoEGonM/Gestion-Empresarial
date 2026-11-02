@@ -1,10 +1,10 @@
 const ADMIN_ROLE = "Administrador";
 const ROLE_MODULES = Object.freeze({
-  Administrador: ["compras", "ventas", "inventarios", "contabilidad", "costos", "reportes", "ayuda", "administrador"],
+  Administrador: ["compras", "ventas", "inventarios", "contabilidad", "nomina", "costos", "reportes", "ayuda", "administrador"],
   Compras: ["compras", "ayuda"],
   Ventas: ["ventas", "ayuda"],
   Inventarios: ["inventarios", "ayuda"],
-  Contabilidad: ["contabilidad", "costos", "ayuda"],
+  Contabilidad: ["contabilidad", "nomina", "costos", "ayuda"],
   Empleado: ["ayuda"],
 });
 
@@ -57,6 +57,8 @@ function moduleFromHref(href) {
       return "inventarios";
     }
     if (url.pathname.endsWith("/reportes-contables.html")) return "contabilidad:estados";
+    if (url.pathname.endsWith("/contabilidad.html")) return "contabilidad";
+    if (url.pathname.endsWith("/nomina.html")) return "nomina";
     if (ADMIN_PAGES.some((page) => url.pathname.endsWith(page))) return "administrador";
     const mod = url.searchParams.get("modulo") || "";
     const view = url.searchParams.get("vista") || "";
@@ -72,6 +74,8 @@ function requestedPageModule() {
     return "inventarios:productos";
   }
   if (pathname.endsWith("/reportes-contables.html")) return "contabilidad:estados";
+  if (pathname.endsWith("/contabilidad.html")) return "contabilidad";
+  if (pathname.endsWith("/nomina.html")) return "nomina";
   if (ADMIN_PAGES.some((page) => pathname.endsWith(page))) return "administrador";
   if (pathname.endsWith("/modulo.html")) {
     const params = new URLSearchParams(search);

@@ -1,0 +1,8 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Icon">
+<rect x="1.5" y="2.5" width="12" height="10" rx="1.2" stroke="#6B7280" stroke-width="1.09375" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="5.4" cy="6.4" r="1.5" stroke="#6B7280" stroke-width="1.09375"/>
+<path d="M3.4 10.4C3.8 9.3 4.6 8.7 5.4 8.7C6.2 8.7 7 9.3 7.4 10.4" stroke="#6B7280" stroke-width="1.09375" stroke-linecap="round"/>
+<path d="M9.2 5.8H11.6M9.2 7.8H11.6M9.2 9.8H10.8" stroke="#6B7280" stroke-width="1.09375" stroke-linecap="round"/>
+</g>
+</svg>

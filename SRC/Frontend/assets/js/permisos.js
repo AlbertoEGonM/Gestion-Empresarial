@@ -15,6 +15,7 @@ const MODULE_DEFINITIONS = [
       { key: "kardex", label: "Kardex" },
       { key: "almacenes", label: "Almacenes" },
       { key: "lotes", label: "Lotes y Series" },
+      { key: "impuestos", label: "Esquemas de Impuestos" },
     ],
   },
   {
@@ -44,9 +45,25 @@ const MODULE_DEFINITIONS = [
     key: "contabilidad",
     label: "Contabilidad, Bancos y Estados Financieros",
     views: [
-      { key: "movimientos", label: "Libro Diario" },
-      { key: "bancos", label: "Bancos y Conciliacion" },
+      { key: "cuentas", label: "Catalogo de Cuentas" },
+      { key: "polizas", label: "Polizas" },
+      { key: "auxiliares", label: "Auxiliares" },
+      { key: "balanza", label: "Balanza de Comprobacion" },
       { key: "estados", label: "Estados Financieros" },
+      { key: "tipocambio", label: "Tipo de Cambio" },
+      { key: "bancos", label: "Bancos y Conciliacion" },
+    ],
+  },
+  {
+    key: "nomina",
+    label: "Nomina, Recibos, Acumulados y Cierres",
+    views: [
+      { key: "empleados", label: "Datos del Trabajador" },
+      { key: "conceptos", label: "Percepciones y Deducciones" },
+      { key: "nominas", label: "Nominas" },
+      { key: "reportes", label: "Reporte de Nomina" },
+      { key: "acumulados", label: "Reporte de Acumulados" },
+      { key: "cierre", label: "Cierre de Periodo" },
     ],
   },
   {
@@ -68,6 +85,7 @@ function buildPresetForRole(roleName) {
       compras: [true, true, true, true],
       ventas: [true, true, true, true],
       contabilidad: [true, true, true, true],
+      nomina: [true, true, true, true],
       costos: [true, true, true, true],
     },
     Inventarios: {
@@ -75,6 +93,7 @@ function buildPresetForRole(roleName) {
       compras: [false, false, false, false],
       ventas: [false, false, false, false],
       contabilidad: [false, false, false, false],
+      nomina: [false, false, false, false],
       costos: [false, false, false, false],
     },
     Compras: {
@@ -82,6 +101,7 @@ function buildPresetForRole(roleName) {
       compras: [true, true, true, false],
       ventas: [false, false, false, false],
       contabilidad: [false, false, false, false],
+      nomina: [false, false, false, false],
       costos: [false, false, false, false],
     },
     Ventas: {
@@ -89,6 +109,7 @@ function buildPresetForRole(roleName) {
       compras: [false, false, false, false],
       ventas: [true, true, true, false],
       contabilidad: [false, false, false, false],
+      nomina: [false, false, false, false],
       costos: [false, false, false, false],
     },
     Contabilidad: {
@@ -96,6 +117,7 @@ function buildPresetForRole(roleName) {
       compras: [false, false, false, false],
       ventas: [false, false, false, false],
       contabilidad: [true, true, true, false],
+      nomina: [true, true, true, false],
       costos: [true, true, true, false],
     },
     Empleado: {
@@ -103,6 +125,7 @@ function buildPresetForRole(roleName) {
       compras: [false, false, false, false],
       ventas: [false, false, false, false],
       contabilidad: [false, false, false, false],
+      nomina: [false, false, false, false],
       costos: [false, false, false, false],
     },
   };

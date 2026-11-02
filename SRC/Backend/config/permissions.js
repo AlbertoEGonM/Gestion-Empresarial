@@ -1,18 +1,19 @@
 const ROLE_MODULES = Object.freeze({
-  Administrador: ["compras", "ventas", "inventarios", "contabilidad", "costos", "reportes", "pos", "ayuda", "administrador"],
+  Administrador: ["compras", "ventas", "inventarios", "contabilidad", "nomina", "costos", "reportes", "pos", "ayuda", "administrador"],
   Compras: ["compras", "inventarios", "ayuda"],
   Ventas: ["ventas", "pos", "ayuda"],
   Inventarios: ["inventarios", "compras", "ayuda"],
-  Contabilidad: ["contabilidad", "costos", "reportes", "ayuda"],
-  Finanzas: ["contabilidad", "costos", "reportes", "pos", "ayuda"],
+  Contabilidad: ["contabilidad", "nomina", "costos", "reportes", "ayuda"],
+  Finanzas: ["contabilidad", "nomina", "costos", "reportes", "pos", "ayuda"],
   Empleado: ["ayuda"],
 });
 
 const MODULE_VIEWS_MAP = Object.freeze({
-  inventarios: ["productos", "kardex", "almacenes", "lotes"],
+  inventarios: ["productos", "kardex", "almacenes", "lotes", "impuestos"],
   compras: ["proveedores", "requisiciones", "ordenes", "recepciones", "pagos"],
   ventas: ["clientes", "cotizaciones", "pedidos", "facturas", "cobranza", "pos"],
-  contabilidad: ["movimientos", "bancos", "estados"],
+  contabilidad: ["cuentas", "polizas", "auxiliares", "balanza", "estados", "tipocambio", "bancos"],
+  nomina: ["empleados", "conceptos", "nominas", "reportes", "acumulados", "cierre"],
   costos: ["hojas", "margenes"],
 });
 
@@ -23,6 +24,7 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
     ventas: { actions: [true, true, true, true], views: [...MODULE_VIEWS_MAP.ventas] },
     contabilidad: { actions: [true, true, true, true], views: [...MODULE_VIEWS_MAP.contabilidad] },
     costos: { actions: [true, true, true, true], views: [...MODULE_VIEWS_MAP.costos] },
+    nomina: { actions: [true, true, true, true], views: [...MODULE_VIEWS_MAP.nomina] },
   },
   Inventarios: {
     inventarios: { actions: [true, true, true, false], views: [...MODULE_VIEWS_MAP.inventarios] },
@@ -30,6 +32,7 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
     ventas: { actions: [false, false, false, false], views: [] },
     contabilidad: { actions: [false, false, false, false], views: [] },
     costos: { actions: [false, false, false, false], views: [] },
+    nomina: { actions: [false, false, false, false], views: [] },
   },
   Compras: {
     inventarios: { actions: [false, false, false, false], views: [] },
@@ -37,6 +40,7 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
     ventas: { actions: [false, false, false, false], views: [] },
     contabilidad: { actions: [false, false, false, false], views: [] },
     costos: { actions: [false, false, false, false], views: [] },
+    nomina: { actions: [false, false, false, false], views: [] },
   },
   Ventas: {
     inventarios: { actions: [false, false, false, false], views: [] },
@@ -44,6 +48,7 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
     ventas: { actions: [true, true, true, false], views: [...MODULE_VIEWS_MAP.ventas] },
     contabilidad: { actions: [false, false, false, false], views: [] },
     costos: { actions: [false, false, false, false], views: [] },
+    nomina: { actions: [false, false, false, false], views: [] },
   },
   Contabilidad: {
     inventarios: { actions: [false, false, false, false], views: [] },
@@ -51,6 +56,7 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
     ventas: { actions: [false, false, false, false], views: [] },
     contabilidad: { actions: [true, true, true, false], views: [...MODULE_VIEWS_MAP.contabilidad] },
     costos: { actions: [true, true, true, false], views: [...MODULE_VIEWS_MAP.costos] },
+    nomina: { actions: [true, true, true, false], views: [...MODULE_VIEWS_MAP.nomina] },
   },
   Finanzas: {
     inventarios: { actions: [false, false, false, false], views: [] },
@@ -58,6 +64,7 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
     ventas: { actions: [false, false, false, false], views: [] },
     contabilidad: { actions: [true, true, true, false], views: [...MODULE_VIEWS_MAP.contabilidad] },
     costos: { actions: [true, true, true, false], views: [...MODULE_VIEWS_MAP.costos] },
+    nomina: { actions: [true, true, true, false], views: [...MODULE_VIEWS_MAP.nomina] },
   },
   Empleado: {
     inventarios: { actions: [false, false, false, false], views: [] },
@@ -65,6 +72,7 @@ const DEFAULT_ROLE_PERMISSIONS = Object.freeze({
     ventas: { actions: [false, false, false, false], views: [] },
     contabilidad: { actions: [false, false, false, false], views: [] },
     costos: { actions: [false, false, false, false], views: [] },
+    nomina: { actions: [false, false, false, false], views: [] },
   },
 });
 

@@ -19,6 +19,8 @@ const {
 const { ensureRecordsTable, getDataset, saveDataset } = require("./modules/records");
 const { ensureAccountingTables, getAccountingReport } = require("./modules/accounting");
 const { createEmployee, deleteEmployee, ensureEmployeesTable, getEmployee, listEmployees, updateEmployee } = require("./modules/employees");
+const { ensureLedgerTables, handleLedgerRoute } = require("./modules/ledger");
+const { ensurePayrollTables, handlePayrollRoute } = require("./modules/payroll");
 const { assertAllowedFields } = require("./config/validator");
 const { stripBotFields, verifyBotProtection } = require("./config/security");
 const { validateAndPrepareUpload } = require("./config/file-security");
@@ -429,7 +431,30 @@ async function handleApi(request, response, requestUrl) {
     sendJson(response, 200, { report: await getAccountingReport(sessionUser, Object.fromEntries(requestUrl.searchParams)) }, request);
     return true;
   }
-  if (route === "/api/uploads/validate" && request.method === "POST") {
+  // Modulos extendidos: Contabilidad tipo COI (/api/ledger/*) y Nomina tipo NOI (/api/payroll/*).
+  // Cada handler devuelve undefined si no reconoce la ruta, o { status, body } / { status, raw, contentType, filename }.
+  const extendedHandler = route.startsWith("/api/ledger/") ? handleLedgerRoute : route.startsWith("/api/payroll/") ? handlePayrollRoute : null;
+  if (extendedHandler) {
+    const result = await extendedHandler({
+      route,
+      method: request.method,
+      user: sessionUser,
+      query: Object.fromEntries(requestUrl.searchParams),
+      readBody: (limit) => parseJsonBody(request, limit),
+      clientIp,
+    });
+    if (!result) return false;
+    if (result.raw) {
+      const headers = buildSecurityHeaders(request, result.contentType || "application/octet-stream");
+      if (result.filename) headers["Content-Disposition"] = `attachment; filename="${String(result.filename).replace(/[^\w.\-]/g, "_")}"`;
+      response.writeHead(result.status || 200, headers);
+      response.end(result.raw);
+      return true;
+    }
+    sendJson(response, result.status || 200, result.body || {}, request);
+    return true;
+  }  if (route === "/api/uploads/validate" && request.method === "POST") {
+    // Modulos extendidos: Contabilidad tipo COI (/api/ledger/*) y Nomina tipo NOI (/api/payroll/*).
     enforceRateLimit(request, "uploads", 20, 10 * 60 * 1000);
     const body = await parseJsonBody(request, 6 * 1024 * 1024);
     assertAllowedFields(body, ["filename", "contentBase64"], "validacion de archivo");
@@ -489,6 +514,8 @@ async function start() {
   await ensureRecordsTable();
   await ensureAccountingTables();
   await ensureEmployeesTable();
+  await ensureLedgerTables();
+  await ensurePayrollTables();
   const server = http.createServer(handleRequest);
   server.listen(PORT, () => {
     console.log(`Servidor iniciado en http://localhost:${PORT}`);

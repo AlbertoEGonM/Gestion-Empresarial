@@ -25,8 +25,9 @@ const FORBIDDEN_MASS_ASSIGNMENT_KEYS = new Set([
 const ALLOWED_MODULE_VIEWS = Object.freeze({
   compras: ["proveedores", "requisiciones", "ordenes", "recepciones", "devoluciones", "pagos", "comparativo"],
   ventas: ["clientes", "cotizaciones", "pedidos", "facturas", "devoluciones", "cobranza", "vendedores", "pos"],
-  inventarios: ["productos", "produccion", "kardex", "almacenes", "transferencias", "precios", "lotes", "categorias", "unidades", "colores"],
+  inventarios: ["productos", "produccion", "kardex", "almacenes", "transferencias", "precios", "lotes", "impuestos", "categorias", "unidades", "colores"],
   contabilidad: ["movimientos", "bancos", "cierres", "estados"],
+  nomina: ["empleados", "conceptos", "nominas", "reportes", "acumulados", "cierre"],
   costos: ["analisis", "hojas", "margenes"],
   reportes: ["reportes"],
   ayuda: ["ayuda"],
